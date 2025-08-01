@@ -165,7 +165,7 @@
             this.txtAzureFolderPath.Name = "txtAzureFolderPath";
             this.txtAzureFolderPath.Size = new System.Drawing.Size(400, 22);
             this.txtAzureFolderPath.TabIndex = 7;
-            this.txtAzureFolderPath.Text = "cdnimages/products";
+            this.txtAzureFolderPath.Text = "products";
             // 
             // lblAzureFolderPath
             // 
