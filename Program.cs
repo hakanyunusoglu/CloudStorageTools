@@ -52,7 +52,7 @@ namespace CloudStorageTools
                 this.btnVideoSizeFinder.Name = "btnVideoSizeFinder";
                 this.btnVideoSizeFinder.Size = new System.Drawing.Size(350, 130);
                 this.btnVideoSizeFinder.TabIndex = 1;
-                this.btnVideoSizeFinder.Text = "Video Size Finder & Analyzer\r\n\r\nAnalyze cloud media files with FFMPEG\r\nExport detailed reports to Excel";
+                this.btnVideoSizeFinder.Text = "Video Size Finder & Analyzer\r\nExport detailed reports to Excel";
                 this.btnVideoSizeFinder.UseVisualStyleBackColor = false;
                 this.btnVideoSizeFinder.Click += new System.EventHandler(this.btnVideoSizeFinder_Click);
                 // 
@@ -65,7 +65,7 @@ namespace CloudStorageTools
                 this.btnCloudFileCleaner.Name = "btnCloudFileCleaner";
                 this.btnCloudFileCleaner.Size = new System.Drawing.Size(350, 130);
                 this.btnCloudFileCleaner.TabIndex = 2;
-                this.btnCloudFileCleaner.Text = "Cloud File Cleaner\r\n\r\n(Coming Soon)\r\nClean and organize cloud storage";
+                this.btnCloudFileCleaner.Text = "Cloud File Cleaner\r\nClean and organize cloud storage";
                 this.btnCloudFileCleaner.UseVisualStyleBackColor = false;
                 this.btnCloudFileCleaner.Enabled = false;
                 // 

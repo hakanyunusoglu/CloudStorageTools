@@ -165,7 +165,6 @@
             this.txtAzureFolderPath.Name = "txtAzureFolderPath";
             this.txtAzureFolderPath.Size = new System.Drawing.Size(400, 22);
             this.txtAzureFolderPath.TabIndex = 7;
-            this.txtAzureFolderPath.Text = "products";
             // 
             // lblAzureFolderPath
             // 
@@ -263,7 +262,6 @@
             this.txtAwsRegion.Name = "txtAwsRegion";
             this.txtAwsRegion.Size = new System.Drawing.Size(200, 22);
             this.txtAwsRegion.TabIndex = 5;
-            this.txtAwsRegion.Text = "us-east-1";
             // 
             // lblAwsRegion
             // 
