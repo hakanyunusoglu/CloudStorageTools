@@ -135,6 +135,8 @@
     <Compile Include="VideoSizeFinder\Components\VideoSizeFinderForm.Designer.cs">
       <DependentUpon>VideoSizeFinderForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="VideoSizeFinder\Dtos\AwsKeysModel.cs" />
+    <Compile Include="VideoSizeFinder\Dtos\AzureKeysModel.cs" />
     <Compile Include="VideoSizeFinder\Dtos\CloudMediaItemDto.cs" />
     <Compile Include="VideoSizeFinder\Dtos\CloudMediaSearchDto.cs" />
     <Compile Include="VideoSizeFinder\Dtos\VideoInfoDto.cs" />
@@ -152,6 +154,8 @@
     <Compile Include="VideoSizeFinder\Services\AzureMediaService.cs" />
     <Compile Include="VideoSizeFinder\Services\ExcelExportService.cs" />
     <Compile Include="VideoSizeFinder\Services\FFmpegAnalyzerService.cs" />
+    <Compile Include="VideoSizeFinder\Services\KeysLoaderService.cs" />
+    <Compile Include="VideoSizeFinder\Services\ResourcesManager.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

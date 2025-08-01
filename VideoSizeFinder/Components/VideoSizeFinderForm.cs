@@ -29,6 +29,13 @@ namespace CloudStorageTools.VideoSizeFinder.Components
 
         private CloudProviderType _currentProvider;
         private CloudConnectionConfig _connectionConfig;
+
+        // Key visibility flags
+        private bool isAwsKeysVisible = false;
+        private bool isAzureKeysVisible = false;
+
+        // Cancel operation flag for partial save
+        private bool _operationCancelled = false;
         public VideoSizeFinderForm()
         {
             InitializeComponent();
@@ -207,6 +214,145 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 else
                 {
                     lblSearchHint.Text = "All media files will be listed";
+                }
+            }
+        }
+
+        private void btnVisibleKey_Click(object sender, EventArgs e)
+        {
+            isAwsKeysVisible = !isAwsKeysVisible;
+
+            txtAwsAccessKey.PasswordChar = isAwsKeysVisible ? '\0' : '*';
+            txtAwsSecretKey.PasswordChar = isAwsKeysVisible ? '\0' : '*';
+
+            btnVisibleKey.Text = isAwsKeysVisible ? "🔒" : "👁️";
+        }
+
+        private void btnAzureVisibleKey_Click(object sender, EventArgs e)
+        {
+            isAzureKeysVisible = !isAzureKeysVisible;
+
+            txtAzureBlobUrl.PasswordChar = isAzureKeysVisible ? '\0' : '*';
+            txtAzureSasToken.PasswordChar = isAzureKeysVisible ? '\0' : '*';
+
+            btnAzureVisibleKey.Text = isAzureKeysVisible ? "🔒" : "👁️";
+        }
+
+        private void btnFillKeysFromCsv_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
+                {
+                    openFileDialog.Filter = "CSV files (*.csv)|*.csv";
+                    openFileDialog.Title = "Choose AWS Keys File";
+
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        string csvPath = openFileDialog.FileName;
+
+                        if (Path.GetExtension(csvPath).ToLower() != ".csv")
+                        {
+                            MessageBox.Show("Only files with .CSV extension can be uploaded!", "Incorrect File Format", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        var awsKeys = KeysLoaderService.LoadAwsKeysFromCsv(csvPath);
+
+                        if (awsKeys != null)
+                        {
+                            txtAwsAccessKey.Text = awsKeys.access_key;
+                            txtAwsSecretKey.Text = awsKeys.secret_access_key;
+                            txtAwsBucketName.Text = awsKeys.bucket_name;
+                            txtAwsRegion.Text = awsKeys.region;
+
+                            MessageBox.Show("AWS Keys information uploaded successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("The CSV format is wrong. Use the headings in the template in the same way!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading AWS keys: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnFillAzureKeysFromCsv_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
+                {
+                    openFileDialog.Filter = "CSV files (*.csv)|*.csv";
+                    openFileDialog.Title = "Choose Azure Keys File";
+
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        string csvPath = openFileDialog.FileName;
+
+                        if (Path.GetExtension(csvPath).ToLower() != ".csv")
+                        {
+                            MessageBox.Show("Only files with .CSV extension can be uploaded!", "Incorrect File Format", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        var azureKeys = KeysLoaderService.LoadAzureKeysFromCsv(csvPath);
+
+                        if (azureKeys != null)
+                        {
+                            txtAzureBlobUrl.Text = azureKeys.blob_url;
+                            txtAzureSasToken.Text = azureKeys.sas_token;
+                            txtAzureContainerName.Text = azureKeys.container_name;
+                            txtAzureFolderPath.Text = azureKeys.folder_path;
+
+                            MessageBox.Show("Azure Keys information uploaded successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("The CSV format is wrong. Use the headings in the template in the same way!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading Azure keys: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnKeysCsvTemplateDownload_Click(object sender, EventArgs e)
+        {
+            DownloadKeysTemplate("aws_keys_template.csv", ResourcesManager.GetAwsKeysTemplate(), "AWS S3");
+        }
+
+        private void btnAzureKeysCsvTemplateDownload_Click(object sender, EventArgs e)
+        {
+            DownloadKeysTemplate("azure_keys_template.csv", ResourcesManager.GetAzureKeysTemplate(), "Azure Blob");
+        }
+
+        private void DownloadKeysTemplate(string fileName, string template, string providerName)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "CSV files (*.csv)|*.csv";
+                saveFileDialog.Title = $"Save {providerName} Keys Template File";
+                saveFileDialog.FileName = fileName;
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        ResourcesManager.SaveTemplate(template, saveFileDialog.FileName);
+                        MessageBox.Show($"{providerName} Keys Template file saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
         }
@@ -453,7 +599,28 @@ namespace CloudStorageTools.VideoSizeFinder.Components
             }
         }
 
+        private async Task HandleCancelledAnalysis(int completedCount)
+        {
+            lblOperationStatus.Text = $"⚠️ Analysis cancelled - {completedCount} files analyzed";
+            lblOperationStatus.ForeColor = Color.Orange;
 
+            if (_analysisResults.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"Analysis was cancelled, but {_analysisResults.Count} files were successfully analyzed.\n\nWould you like to save the partial results to Excel?",
+                    "Save Partial Results?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    await ExportAnalysisToExcelAsync();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Analysis was cancelled and no files were processed.",
+                    "Analysis Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
         private CloudMediaSearchDto CreateSearchCriteria()
         {
             var criteria = new CloudMediaSearchDto
@@ -524,6 +691,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         private async Task DownloadSelectedFilesAsync(List<CloudMediaItemDto> selectedItems, string downloadPath)
         {
             _cancellationTokenSource = new CancellationTokenSource();
+            _operationCancelled = false;
 
             try
             {
@@ -539,7 +707,10 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 foreach (var item in selectedItems)
                 {
                     if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    {
+                        _operationCancelled = true;
                         break;
+                    }
 
                     try
                     {
@@ -560,12 +731,17 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                     }
                 }
 
-                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                if (!_operationCancelled)
                 {
                     lblOperationStatus.Text = $"✅ Downloaded {completed} files successfully";
                     lblOperationStatus.ForeColor = Color.Green;
                     MessageBox.Show($"Download completed! Downloaded {completed} files to:\n{downloadPath}",
                         "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    lblOperationStatus.Text = $"⚠️ Download cancelled - {completed} files completed";
+                    lblOperationStatus.ForeColor = Color.Orange;
                 }
             }
             catch (OperationCanceledException)
@@ -598,6 +774,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         private async Task AnalyzeSelectedFilesAsync(List<CloudMediaItemDto> selectedItems)
         {
             _cancellationTokenSource = new CancellationTokenSource();
+            _operationCancelled = false;
 
             try
             {
@@ -614,7 +791,10 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 foreach (var item in selectedItems)
                 {
                     if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    {
+                        _operationCancelled = true;
                         break;
+                    }
 
                     try
                     {
@@ -643,7 +823,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                     }
                 }
 
-                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                if (!_operationCancelled)
                 {
                     lblOperationStatus.Text = $"✅ Analyzed {completed} files successfully";
                     lblOperationStatus.ForeColor = Color.Green;
@@ -661,11 +841,15 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                         }
                     }
                 }
+                else
+                {
+                    // Cancel durumunda kaydetmek isteyip istemediğini sor
+                    await HandleCancelledAnalysis(completed);
+                }
             }
             catch (OperationCanceledException)
             {
-                lblOperationStatus.Text = "Analysis cancelled";
-                lblOperationStatus.ForeColor = Color.Orange;
+                await HandleCancelledAnalysis(_analysisResults.Count);
             }
             finally
             {
