@@ -51,15 +51,56 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             _containerClient = new BlobContainerClient(uri);
         }
 
-        public async Task<bool> ValidateConnectionAsync(string url)
+        // AzureMediaService.cs - Geliştirilmiş ValidateConnectionAsync metodu
+        public async Task<bool> ValidateConnectionAsync(string url = null)
         {
             try
             {
-                BlobClient blobClient = _containerClient.GetBlobClient(url);
-                return await blobClient.ExistsAsync();
+                // 1. Container'ın var olup olmadığını kontrol et
+                var containerExists = await _containerClient.ExistsAsync();
+                if (!containerExists.Value)
+                {
+                    return false;
+                }
+
+                // 2. Container'a erişim izinlerini test et (properties'i oku)
+                var properties = await _containerClient.GetPropertiesAsync();
+
+                // 3. Liste operasyonu yapabilir miyiz test et (sadece 1 item listele)
+                var blobPages = _containerClient.GetBlobsAsync().AsPages(pageSizeHint: 1);
+                var pageEnumerator = blobPages.GetAsyncEnumerator();
+                try
+                {
+                    // Sadece ilk sayfayı al, bu bize liste yetkisi olup olmadığını gösterir
+                    if (await pageEnumerator.MoveNextAsync())
+                    {
+                        var firstPage = pageEnumerator.Current;
+                        // Başarıyla sayfa aldık, liste yetkimiz var
+                    }
+                }
+                finally
+                {
+                    await pageEnumerator.DisposeAsync();
+                }
+
+                return true;
             }
-            catch (Exception)
+            catch (Azure.RequestFailedException ex)
             {
+                // Azure özel hata kodlarını kontrol et
+                if (ex.Status == 403) // Forbidden - Yetki yok
+                {
+                    System.Diagnostics.Debug.WriteLine("Azure Access Denied: Check SAS token permissions");
+                }
+                else if (ex.Status == 404) // Not Found - Container bulunamadı
+                {
+                    System.Diagnostics.Debug.WriteLine("Azure Container not found");
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Azure Connection Error: {ex.Message}");
                 return false;
             }
         }
@@ -200,7 +241,7 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                 Name = fileName,
                 Extension = extension,
                 FullPath = blobItem.Name.Replace(_folderPath + "/", "").TrimStart('/'),
-                FolderPath = Path.GetDirectoryName(blobItem.Name.Replace(_folderPath + "/", ""))?.Replace("\\", "/"),
+                FolderPath = _folderPath,
                 Size = blobItem.Properties.ContentLength ?? 0,
                 SizeFormatted = FormatFileSize(blobItem.Properties.ContentLength ?? 0),
                 LastModified = blobItem.Properties.LastModified?.DateTime ?? DateTime.MinValue,
@@ -209,7 +250,7 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                 IsM3u8Content = blobItem.Name.Contains("/") && extension == ".m3u8",
                 PublicUrl = GetPublicUrl(blobItem.Name.Replace(_folderPath + "/", "").TrimStart('/')),
                 MediaType = GetMediaTypeFromExtension(extension),
-                IsSelected = false
+                IsSelected = false,
             };
         }
 

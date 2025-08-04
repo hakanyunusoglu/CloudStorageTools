@@ -1,5 +1,4 @@
-﻿using CloudStorageTools.VideoSizeFinder.Enums;
-using System;
+﻿using System;
 
 namespace CloudStorageTools.VideoSizeFinder
 {
@@ -25,7 +24,6 @@ namespace CloudStorageTools.VideoSizeFinder
         public string CloudProvider { get; set; }
         public string ContainerBucket { get; set; }
         public string FolderPath { get; set; }
-        public string FullPath { get; set; }
         public string PublicUrl { get; set; }
         public bool IsM3u8Folder { get; set; }
         public int? M3u8SegmentCount { get; set; }

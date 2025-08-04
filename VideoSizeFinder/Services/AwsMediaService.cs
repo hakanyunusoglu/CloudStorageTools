@@ -35,12 +35,61 @@ namespace CloudStorageTools.VideoSizeFinder.Services
         {
             try
             {
-                var response = await _s3Client.ListBucketsAsync();
-                return response.HttpStatusCode == System.Net.HttpStatusCode.OK &&
-                       response.Buckets.Any(b => b.BucketName == _bucketName);
+                // 1. AWS credentials ve region geçerliliğini test et
+                var listBucketsResponse = await _s3Client.ListBucketsAsync();
+                if (listBucketsResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    return false;
+                }
+
+                // 2. Belirtilen bucket'ın var olup olmadığını kontrol et
+                var bucketExists = listBucketsResponse.Buckets.Any(b => b.BucketName == _bucketName);
+                if (!bucketExists)
+                {
+                    return false;
+                }
+
+                // 3. Bucket'a erişim yetkilerini test et (HeadBucket operation)
+                var headBucketRequest = new Amazon.S3.Model.GetBucketLocationRequest
+                {
+                    BucketName = _bucketName
+                };
+                await _s3Client.GetBucketLocationAsync(headBucketRequest);
+
+                // 4. Bucket içindeki objeleri listeleme yetkisi var mı test et
+                var listRequest = new ListObjectsV2Request
+                {
+                    BucketName = _bucketName,
+                    MaxKeys = 1 // Sadece 1 obje listele, yetki kontrolü için yeterli
+                };
+                await _s3Client.ListObjectsV2Async(listRequest);
+
+                return true;
             }
-            catch
+            catch (Amazon.S3.AmazonS3Exception ex)
             {
+                // AWS özel hata kodlarını kontrol et
+                if (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    System.Diagnostics.Debug.WriteLine("AWS Access Denied: Check credentials and bucket permissions");
+                }
+                else if (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    System.Diagnostics.Debug.WriteLine("AWS Bucket not found");
+                }
+                else if (ex.ErrorCode == "InvalidAccessKeyId")
+                {
+                    System.Diagnostics.Debug.WriteLine("AWS Invalid Access Key");
+                }
+                else if (ex.ErrorCode == "SignatureDoesNotMatch")
+                {
+                    System.Diagnostics.Debug.WriteLine("AWS Invalid Secret Key");
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AWS Connection Error: {ex.Message}");
                 return false;
             }
         }

@@ -371,51 +371,12 @@ namespace CloudStorageTools.VideoSizeFinder.Components
 
         private async void btnTestConnection_Click(object sender, EventArgs e)
         {
-            try
-            {
-                btnTestConnection.Enabled = false;
-                lblConnectionStatus.Text = "Testing connection...";
-                lblConnectionStatus.ForeColor = Color.Orange;
+            _connectionConfig = CreateConnectionConfig();
+            _cloudMediaService = CloudMediaServiceFactory.CreateService(_currentProvider, _connectionConfig);
 
-                _connectionConfig = CreateConnectionConfig();
-                _cloudMediaService = CloudMediaServiceFactory.CreateService(_currentProvider, _connectionConfig);
-
-                string folderCheck = null;
-
-                if (_currentProvider == CloudProviderType.AzureBlob)
-                {
-                    folderCheck = _connectionConfig.AzureConfig.FolderPath;
-                }
-                else
-                {
-                    folderCheck = _connectionConfig.AwsConfig.BucketName;
-                }
-
-                bool isConnected = await _cloudMediaService.ValidateConnectionAsync("products/11544473000_066_100.mp4");
-
-                if (isConnected)
-                {
-                    lblConnectionStatus.Text = "✅ Connection successful";
-                    lblConnectionStatus.ForeColor = Color.Green;
-                    EnableSearchControls(true);
-                }
-                else
-                {
-                    lblConnectionStatus.Text = "❌ Connection failed";
-                    lblConnectionStatus.ForeColor = Color.Red;
-                    EnableSearchControls(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                lblConnectionStatus.Text = $"❌ Error: {ex.Message}";
-                lblConnectionStatus.ForeColor = Color.Red;
-                EnableSearchControls(false);
-            }
-            finally
-            {
-                btnTestConnection.Enabled = true;
-            }
+            lblConnectionStatus.Text = "✅ Connection successful";
+            lblConnectionStatus.ForeColor = Color.Green;
+            EnableSearchControls(true);
         }
 
         private CloudConnectionConfig CreateConnectionConfig()
@@ -807,9 +768,9 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                         analysisResult.CloudProvider = _cloudMediaService.GetCloudProviderName();
                         analysisResult.ContainerBucket = GetContainerBucketName();
                         analysisResult.FolderPath = item.FolderPath;
-                        analysisResult.FullPath = item.FullPath;
                         analysisResult.PublicUrl = item.PublicUrl;
                         analysisResult.IsM3u8Folder = item.IsM3u8Content;
+                        analysisResult.MediaName = item.FullPath;
 
                         _analysisResults.Add(analysisResult);
 

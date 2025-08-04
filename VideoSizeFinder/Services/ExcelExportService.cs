@@ -98,12 +98,11 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                 worksheet.Cells[excelRow, 21].Value = media.CloudProvider;
                 worksheet.Cells[excelRow, 22].Value = media.ContainerBucket;
                 worksheet.Cells[excelRow, 23].Value = media.FolderPath;
-                worksheet.Cells[excelRow, 24].Value = media.FullPath;
-                worksheet.Cells[excelRow, 25].Value = media.PublicUrl;
-                worksheet.Cells[excelRow, 26].Value = media.IsM3u8Folder;
-                worksheet.Cells[excelRow, 27].Value = media.M3u8SegmentCount;
-                worksheet.Cells[excelRow, 28].Value = media.CreatedDate;
-                worksheet.Cells[excelRow, 29].Value = media.ModifiedDate;
+                worksheet.Cells[excelRow, 24].Value = media.PublicUrl;
+                worksheet.Cells[excelRow, 25].Value = media.IsM3u8Folder;
+                worksheet.Cells[excelRow, 26].Value = media.M3u8SegmentCount;
+                worksheet.Cells[excelRow, 27].Value = media.CreatedDate;
+                worksheet.Cells[excelRow, 28].Value = media.ModifiedDate;
 
                 // Satır renklandirme (alternatif renkler)
                 if (row % 2 == 1)
@@ -124,7 +123,7 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             worksheet.Column(3).Width = 20; // Content Type
             worksheet.Column(8).Width = 15; // Resolution
             worksheet.Column(9).Width = 15; // Duration Formatted
-            worksheet.Column(25).Width = 50; // Public URL
+            worksheet.Column(24).Width = 50; // Public URL
 
             // Tarih formatı ayarla
             worksheet.Column(28).Style.Numberformat.Format = "dd/mm/yyyy hh:mm:ss";

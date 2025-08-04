@@ -30,8 +30,6 @@
         {
             this.tabControl = new System.Windows.Forms.TabControl();
             this.tabPageConnection = new System.Windows.Forms.TabPage();
-            this.lblConnectionStatus = new System.Windows.Forms.Label();
-            this.btnTestConnection = new System.Windows.Forms.Button();
             this.pnlAzureConfig = new System.Windows.Forms.Panel();
             this.txtAzureFolderPath = new System.Windows.Forms.TextBox();
             this.lblAzureFolderPath = new System.Windows.Forms.Label();
@@ -41,6 +39,9 @@
             this.lblAzureSasToken = new System.Windows.Forms.Label();
             this.txtAzureBlobUrl = new System.Windows.Forms.TextBox();
             this.lblAzureBlobUrl = new System.Windows.Forms.Label();
+            this.btnAzureKeysCsvTemplateDownload = new System.Windows.Forms.Button();
+            this.btnFillAzureKeysFromCsv = new System.Windows.Forms.Button();
+            this.btnAzureVisibleKey = new System.Windows.Forms.Button();
             this.pnlAwsConfig = new System.Windows.Forms.Panel();
             this.txtAwsBucketName = new System.Windows.Forms.TextBox();
             this.lblAwsBucketName = new System.Windows.Forms.Label();
@@ -50,6 +51,9 @@
             this.lblAwsSecretKey = new System.Windows.Forms.Label();
             this.txtAwsAccessKey = new System.Windows.Forms.TextBox();
             this.lblAwsAccessKey = new System.Windows.Forms.Label();
+            this.btnKeysCsvTemplateDownload = new System.Windows.Forms.Button();
+            this.btnFillKeysFromCsv = new System.Windows.Forms.Button();
+            this.btnVisibleKey = new System.Windows.Forms.Button();
             this.grpCloudProvider = new System.Windows.Forms.GroupBox();
             this.rbAzureBlob = new System.Windows.Forms.RadioButton();
             this.rbAwsS3 = new System.Windows.Forms.RadioButton();
@@ -79,12 +83,8 @@
             this.btnCancelOperation = new System.Windows.Forms.Button();
             this.btnAnalyzeSelected = new System.Windows.Forms.Button();
             this.btnDownloadSelected = new System.Windows.Forms.Button();
-            this.btnVisibleKey = new System.Windows.Forms.Button();
-            this.btnFillKeysFromCsv = new System.Windows.Forms.Button();
-            this.btnKeysCsvTemplateDownload = new System.Windows.Forms.Button();
-            this.btnAzureVisibleKey = new System.Windows.Forms.Button();
-            this.btnFillAzureKeysFromCsv = new System.Windows.Forms.Button();
-            this.btnAzureKeysCsvTemplateDownload = new System.Windows.Forms.Button();
+            this.btnTestConnection = new System.Windows.Forms.Button();
+            this.lblConnectionStatus = new System.Windows.Forms.Label();
             this.tabControl.SuspendLayout();
             this.tabPageConnection.SuspendLayout();
             this.pnlAzureConfig.SuspendLayout();
@@ -126,29 +126,6 @@
             this.tabPageConnection.Text = "Connection";
             this.tabPageConnection.UseVisualStyleBackColor = true;
             // 
-            // lblConnectionStatus
-            // 
-            this.lblConnectionStatus.AutoSize = true;
-            this.lblConnectionStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
-            this.lblConnectionStatus.Location = new System.Drawing.Point(190, 390);
-            this.lblConnectionStatus.Name = "lblConnectionStatus";
-            this.lblConnectionStatus.Size = new System.Drawing.Size(186, 18);
-            this.lblConnectionStatus.TabIndex = 4;
-            this.lblConnectionStatus.Text = "Please test connection first";
-            // 
-            // btnTestConnection
-            // 
-            this.btnTestConnection.BackColor = System.Drawing.Color.LightBlue;
-            this.btnTestConnection.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnTestConnection.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
-            this.btnTestConnection.Location = new System.Drawing.Point(20, 380);
-            this.btnTestConnection.Name = "btnTestConnection";
-            this.btnTestConnection.Size = new System.Drawing.Size(150, 40);
-            this.btnTestConnection.TabIndex = 3;
-            this.btnTestConnection.Text = "Test Connection";
-            this.btnTestConnection.UseVisualStyleBackColor = false;
-            this.btnTestConnection.Click += new System.EventHandler(this.btnTestConnection_Click);
-            // 
             // pnlAzureConfig
             // 
             this.pnlAzureConfig.Controls.Add(this.txtAzureFolderPath);
@@ -159,9 +136,12 @@
             this.pnlAzureConfig.Controls.Add(this.lblAzureSasToken);
             this.pnlAzureConfig.Controls.Add(this.txtAzureBlobUrl);
             this.pnlAzureConfig.Controls.Add(this.lblAzureBlobUrl);
+            this.pnlAzureConfig.Controls.Add(this.btnAzureKeysCsvTemplateDownload);
+            this.pnlAzureConfig.Controls.Add(this.btnFillAzureKeysFromCsv);
+            this.pnlAzureConfig.Controls.Add(this.btnAzureVisibleKey);
             this.pnlAzureConfig.Location = new System.Drawing.Point(20, 138);
             this.pnlAzureConfig.Name = "pnlAzureConfig";
-            this.pnlAzureConfig.Size = new System.Drawing.Size(668, 161);
+            this.pnlAzureConfig.Size = new System.Drawing.Size(746, 224);
             this.pnlAzureConfig.TabIndex = 2;
             this.pnlAzureConfig.Visible = false;
             // 
@@ -230,6 +210,45 @@
             this.lblAzureBlobUrl.TabIndex = 0;
             this.lblAzureBlobUrl.Text = "Blob URL:";
             // 
+            // btnAzureKeysCsvTemplateDownload
+            // 
+            this.btnAzureKeysCsvTemplateDownload.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+            this.btnAzureKeysCsvTemplateDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnAzureKeysCsvTemplateDownload.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
+            this.btnAzureKeysCsvTemplateDownload.Location = new System.Drawing.Point(210, 175);
+            this.btnAzureKeysCsvTemplateDownload.Name = "btnAzureKeysCsvTemplateDownload";
+            this.btnAzureKeysCsvTemplateDownload.Size = new System.Drawing.Size(250, 37);
+            this.btnAzureKeysCsvTemplateDownload.TabIndex = 18;
+            this.btnAzureKeysCsvTemplateDownload.Text = "Download Keys Template";
+            this.btnAzureKeysCsvTemplateDownload.UseVisualStyleBackColor = false;
+            this.btnAzureKeysCsvTemplateDownload.Click += new System.EventHandler(this.btnAzureKeysCsvTemplateDownload_Click);
+            // 
+            // btnFillAzureKeysFromCsv
+            // 
+            this.btnFillAzureKeysFromCsv.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
+            this.btnFillAzureKeysFromCsv.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnFillAzureKeysFromCsv.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
+            this.btnFillAzureKeysFromCsv.Location = new System.Drawing.Point(20, 175);
+            this.btnFillAzureKeysFromCsv.Name = "btnFillAzureKeysFromCsv";
+            this.btnFillAzureKeysFromCsv.Size = new System.Drawing.Size(170, 37);
+            this.btnFillAzureKeysFromCsv.TabIndex = 17;
+            this.btnFillAzureKeysFromCsv.Text = "Fill Keys From Csv";
+            this.btnFillAzureKeysFromCsv.UseVisualStyleBackColor = false;
+            this.btnFillAzureKeysFromCsv.Click += new System.EventHandler(this.btnFillAzureKeysFromCsv_Click);
+            // 
+            // btnAzureVisibleKey
+            // 
+            this.btnAzureVisibleKey.BackColor = System.Drawing.SystemColors.ButtonFace;
+            this.btnAzureVisibleKey.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.btnAzureVisibleKey.Font = new System.Drawing.Font("Segoe UI", 15F, System.Drawing.FontStyle.Bold);
+            this.btnAzureVisibleKey.Location = new System.Drawing.Point(670, 17);
+            this.btnAzureVisibleKey.Name = "btnAzureVisibleKey";
+            this.btnAzureVisibleKey.Size = new System.Drawing.Size(53, 52);
+            this.btnAzureVisibleKey.TabIndex = 14;
+            this.btnAzureVisibleKey.Text = "👁️";
+            this.btnAzureVisibleKey.UseVisualStyleBackColor = false;
+            this.btnAzureVisibleKey.Click += new System.EventHandler(this.btnAzureVisibleKey_Click);
+            // 
             // pnlAwsConfig
             // 
             this.pnlAwsConfig.Controls.Add(this.txtAwsBucketName);
@@ -240,9 +259,12 @@
             this.pnlAwsConfig.Controls.Add(this.lblAwsSecretKey);
             this.pnlAwsConfig.Controls.Add(this.txtAwsAccessKey);
             this.pnlAwsConfig.Controls.Add(this.lblAwsAccessKey);
+            this.pnlAwsConfig.Controls.Add(this.btnKeysCsvTemplateDownload);
+            this.pnlAwsConfig.Controls.Add(this.btnFillKeysFromCsv);
+            this.pnlAwsConfig.Controls.Add(this.btnVisibleKey);
             this.pnlAwsConfig.Location = new System.Drawing.Point(20, 138);
             this.pnlAwsConfig.Name = "pnlAwsConfig";
-            this.pnlAwsConfig.Size = new System.Drawing.Size(683, 223);
+            this.pnlAwsConfig.Size = new System.Drawing.Size(746, 223);
             this.pnlAwsConfig.TabIndex = 1;
             this.pnlAwsConfig.Visible = false;
             // 
@@ -311,6 +333,45 @@
             this.lblAwsAccessKey.Size = new System.Drawing.Size(81, 16);
             this.lblAwsAccessKey.TabIndex = 0;
             this.lblAwsAccessKey.Text = "Access Key:";
+            // 
+            // btnKeysCsvTemplateDownload
+            // 
+            this.btnKeysCsvTemplateDownload.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+            this.btnKeysCsvTemplateDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnKeysCsvTemplateDownload.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
+            this.btnKeysCsvTemplateDownload.Location = new System.Drawing.Point(210, 230);
+            this.btnKeysCsvTemplateDownload.Name = "btnKeysCsvTemplateDownload";
+            this.btnKeysCsvTemplateDownload.Size = new System.Drawing.Size(250, 37);
+            this.btnKeysCsvTemplateDownload.TabIndex = 18;
+            this.btnKeysCsvTemplateDownload.Text = "Download Keys Template";
+            this.btnKeysCsvTemplateDownload.UseVisualStyleBackColor = false;
+            this.btnKeysCsvTemplateDownload.Click += new System.EventHandler(this.btnKeysCsvTemplateDownload_Click);
+            // 
+            // btnFillKeysFromCsv
+            // 
+            this.btnFillKeysFromCsv.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
+            this.btnFillKeysFromCsv.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnFillKeysFromCsv.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
+            this.btnFillKeysFromCsv.Location = new System.Drawing.Point(20, 230);
+            this.btnFillKeysFromCsv.Name = "btnFillKeysFromCsv";
+            this.btnFillKeysFromCsv.Size = new System.Drawing.Size(170, 37);
+            this.btnFillKeysFromCsv.TabIndex = 17;
+            this.btnFillKeysFromCsv.Text = "Fill Keys From Csv";
+            this.btnFillKeysFromCsv.UseVisualStyleBackColor = false;
+            this.btnFillKeysFromCsv.Click += new System.EventHandler(this.btnFillKeysFromCsv_Click);
+            // 
+            // btnVisibleKey
+            // 
+            this.btnVisibleKey.BackColor = System.Drawing.SystemColors.ButtonFace;
+            this.btnVisibleKey.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.btnVisibleKey.Font = new System.Drawing.Font("Segoe UI", 15F, System.Drawing.FontStyle.Bold);
+            this.btnVisibleKey.Location = new System.Drawing.Point(570, 17);
+            this.btnVisibleKey.Name = "btnVisibleKey";
+            this.btnVisibleKey.Size = new System.Drawing.Size(53, 52);
+            this.btnVisibleKey.TabIndex = 14;
+            this.btnVisibleKey.Text = "👁️";
+            this.btnVisibleKey.UseVisualStyleBackColor = false;
+            this.btnVisibleKey.Click += new System.EventHandler(this.btnVisibleKey_Click);
             // 
             // grpCloudProvider
             // 
@@ -419,7 +480,6 @@
             // btnSearch
             // 
             this.btnSearch.BackColor = System.Drawing.Color.LightGreen;
-            this.btnSearch.Enabled = false;
             this.btnSearch.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSearch.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
             this.btnSearch.Location = new System.Drawing.Point(20, 240);
@@ -442,7 +502,6 @@
             this.grpSearchOptions.Controls.Add(this.rbSearchAllMedia);
             this.grpSearchOptions.Controls.Add(this.rbSearchByExtension);
             this.grpSearchOptions.Controls.Add(this.rbSearchByName);
-            this.grpSearchOptions.Enabled = false;
             this.grpSearchOptions.Location = new System.Drawing.Point(20, 20);
             this.grpSearchOptions.Name = "grpSearchOptions";
             this.grpSearchOptions.Size = new System.Drawing.Size(625, 200);
@@ -677,83 +736,28 @@
             this.btnDownloadSelected.UseVisualStyleBackColor = false;
             this.btnDownloadSelected.Click += new System.EventHandler(this.btnDownloadSelected_Click);
             // 
-            // btnVisibleKey
+            // btnTestConnection
             // 
-            this.btnVisibleKey.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.btnVisibleKey.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.btnVisibleKey.Font = new System.Drawing.Font("Segoe UI", 15F, System.Drawing.FontStyle.Bold);
-            this.btnVisibleKey.Location = new System.Drawing.Point(570, 17);
-            this.btnVisibleKey.Name = "btnVisibleKey";
-            this.btnVisibleKey.Size = new System.Drawing.Size(53, 52);
-            this.btnVisibleKey.TabIndex = 14;
-            this.btnVisibleKey.Text = "👁️";
-            this.btnVisibleKey.UseVisualStyleBackColor = false;
-            this.btnVisibleKey.Click += new System.EventHandler(this.btnVisibleKey_Click);
+            this.btnTestConnection.BackColor = System.Drawing.Color.LightBlue;
+            this.btnTestConnection.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnTestConnection.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnTestConnection.Location = new System.Drawing.Point(20, 381);
+            this.btnTestConnection.Name = "btnTestConnection";
+            this.btnTestConnection.Size = new System.Drawing.Size(190, 40);
+            this.btnTestConnection.TabIndex = 3;
+            this.btnTestConnection.Text = "Test Connection";
+            this.btnTestConnection.UseVisualStyleBackColor = false;
+            this.btnTestConnection.Click += new System.EventHandler(this.btnTestConnection_Click);
             // 
-            // btnFillKeysFromCsv
+            // lblConnectionStatus
             // 
-            this.btnFillKeysFromCsv.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
-            this.btnFillKeysFromCsv.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnFillKeysFromCsv.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
-            this.btnFillKeysFromCsv.Location = new System.Drawing.Point(20, 230);
-            this.btnFillKeysFromCsv.Name = "btnFillKeysFromCsv";
-            this.btnFillKeysFromCsv.Size = new System.Drawing.Size(170, 37);
-            this.btnFillKeysFromCsv.TabIndex = 17;
-            this.btnFillKeysFromCsv.Text = "Fill Keys From Csv";
-            this.btnFillKeysFromCsv.UseVisualStyleBackColor = false;
-            this.btnFillKeysFromCsv.Click += new System.EventHandler(this.btnFillKeysFromCsv_Click);
-            // 
-            // btnKeysCsvTemplateDownload
-            // 
-            this.btnKeysCsvTemplateDownload.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
-            this.btnKeysCsvTemplateDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnKeysCsvTemplateDownload.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
-            this.btnKeysCsvTemplateDownload.Location = new System.Drawing.Point(210, 230);
-            this.btnKeysCsvTemplateDownload.Name = "btnKeysCsvTemplateDownload";
-            this.btnKeysCsvTemplateDownload.Size = new System.Drawing.Size(250, 37);
-            this.btnKeysCsvTemplateDownload.TabIndex = 18;
-            this.btnKeysCsvTemplateDownload.Text = "Download Keys Template";
-            this.btnKeysCsvTemplateDownload.UseVisualStyleBackColor = false;
-            this.btnKeysCsvTemplateDownload.Click += new System.EventHandler(this.btnKeysCsvTemplateDownload_Click);
-            // 
-            // btnAzureVisibleKey
-            // 
-            this.btnAzureVisibleKey.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.btnAzureVisibleKey.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.btnAzureVisibleKey.Font = new System.Drawing.Font("Segoe UI", 15F, System.Drawing.FontStyle.Bold);
-            this.btnAzureVisibleKey.Location = new System.Drawing.Point(670, 17);
-            this.btnAzureVisibleKey.Name = "btnAzureVisibleKey";
-            this.btnAzureVisibleKey.Size = new System.Drawing.Size(53, 52);
-            this.btnAzureVisibleKey.TabIndex = 14;
-            this.btnAzureVisibleKey.Text = "👁️";
-            this.btnAzureVisibleKey.UseVisualStyleBackColor = false;
-            this.btnAzureVisibleKey.Click += new System.EventHandler(this.btnAzureVisibleKey_Click);
-            // 
-            // btnFillAzureKeysFromCsv
-            // 
-            this.btnFillAzureKeysFromCsv.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
-            this.btnFillAzureKeysFromCsv.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnFillAzureKeysFromCsv.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
-            this.btnFillAzureKeysFromCsv.Location = new System.Drawing.Point(20, 230);
-            this.btnFillAzureKeysFromCsv.Name = "btnFillAzureKeysFromCsv";
-            this.btnFillAzureKeysFromCsv.Size = new System.Drawing.Size(170, 37);
-            this.btnFillAzureKeysFromCsv.TabIndex = 17;
-            this.btnFillAzureKeysFromCsv.Text = "Fill Keys From Csv";
-            this.btnFillAzureKeysFromCsv.UseVisualStyleBackColor = false;
-            this.btnFillAzureKeysFromCsv.Click += new System.EventHandler(this.btnFillAzureKeysFromCsv_Click);
-            // 
-            // btnAzureKeysCsvTemplateDownload
-            // 
-            this.btnAzureKeysCsvTemplateDownload.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
-            this.btnAzureKeysCsvTemplateDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnAzureKeysCsvTemplateDownload.Font = new System.Drawing.Font("Arial Rounded MT Bold", 7.8F);
-            this.btnAzureKeysCsvTemplateDownload.Location = new System.Drawing.Point(210, 230);
-            this.btnAzureKeysCsvTemplateDownload.Name = "btnAzureKeysCsvTemplateDownload";
-            this.btnAzureKeysCsvTemplateDownload.Size = new System.Drawing.Size(250, 37);
-            this.btnAzureKeysCsvTemplateDownload.TabIndex = 18;
-            this.btnAzureKeysCsvTemplateDownload.Text = "Download Keys Template";
-            this.btnAzureKeysCsvTemplateDownload.UseVisualStyleBackColor = false;
-            this.btnAzureKeysCsvTemplateDownload.Click += new System.EventHandler(this.btnAzureKeysCsvTemplateDownload_Click);
+            this.lblConnectionStatus.AutoSize = true;
+            this.lblConnectionStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.lblConnectionStatus.Location = new System.Drawing.Point(251, 391);
+            this.lblConnectionStatus.Name = "lblConnectionStatus";
+            this.lblConnectionStatus.Size = new System.Drawing.Size(186, 18);
+            this.lblConnectionStatus.TabIndex = 4;
+            this.lblConnectionStatus.Text = "Please test connection first";
             // 
             // VideoSizeFinderForm
             // 
@@ -819,8 +823,6 @@
         private System.Windows.Forms.TextBox txtAzureContainerName;
         private System.Windows.Forms.Label lblAzureFolderPath;
         private System.Windows.Forms.TextBox txtAzureFolderPath;
-        private System.Windows.Forms.Button btnTestConnection;
-        private System.Windows.Forms.Label lblConnectionStatus;
 
         // Search Tab Controls
         private System.Windows.Forms.GroupBox grpSearchOptions;
@@ -859,5 +861,7 @@
         private System.Windows.Forms.Button btnAzureVisibleKey;
         private System.Windows.Forms.Button btnFillAzureKeysFromCsv;
         private System.Windows.Forms.Button btnAzureKeysCsvTemplateDownload;
+        private System.Windows.Forms.Label lblConnectionStatus;
+        private System.Windows.Forms.Button btnTestConnection;
     }
 }

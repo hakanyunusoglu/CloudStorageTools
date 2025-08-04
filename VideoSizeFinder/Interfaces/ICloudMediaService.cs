@@ -9,7 +9,7 @@ namespace CloudStorageTools.VideoSizeFinder.Interfaces
 {
     public interface ICloudMediaService
     {
-        Task<bool> ValidateConnectionAsync(string url);
+        Task<bool> ValidateConnectionAsync(string url = null);
         Task<List<CloudMediaItemDto>> SearchMediaAsync(CloudMediaSearchDto searchCriteria);
         Task<Stream> DownloadMediaAsync(string fullPath);
         Task<byte[]> DownloadMediaBytesAsync(string fullPath);
