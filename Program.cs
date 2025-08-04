@@ -1,4 +1,5 @@
-﻿using CloudStorageTools.VideoSizeFinder.Components;
+﻿using CloudStorageTools.CloudMediaValidator.Components;
+using CloudStorageTools.VideoSizeFinder.Components;
 using OfficeOpenXml;
 using System;
 using System.Diagnostics;
@@ -64,6 +65,7 @@ namespace CloudStorageTools
             private void InitializeComponent()
             {
                 this.btnVideoSizeFinder = new System.Windows.Forms.Button();
+                this.btnCloudMediaValidator = new System.Windows.Forms.Button();
                 this.btnCloudFileCleaner = new System.Windows.Forms.Button();
                 this.lblTitle = new System.Windows.Forms.Label();
                 this.SuspendLayout();
@@ -91,15 +93,28 @@ namespace CloudStorageTools
                 this.btnVideoSizeFinder.UseVisualStyleBackColor = false;
                 this.btnVideoSizeFinder.Click += new System.EventHandler(this.btnVideoSizeFinder_Click);
                 // 
+                // btnCloudMediaValidator
+                // 
+                this.btnCloudMediaValidator.BackColor = System.Drawing.Color.LightGreen;
+                this.btnCloudMediaValidator.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+                this.btnCloudMediaValidator.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
+                this.btnCloudMediaValidator.Location = new System.Drawing.Point(50, 250);
+                this.btnCloudMediaValidator.Name = "btnCloudMediaValidator";
+                this.btnCloudMediaValidator.Size = new System.Drawing.Size(350, 130);
+                this.btnCloudMediaValidator.TabIndex = 2;
+                this.btnCloudMediaValidator.Text = "Cloud Media Validator\r\nValidate media existence from CSV";
+                this.btnCloudMediaValidator.UseVisualStyleBackColor = false;
+                this.btnCloudMediaValidator.Click += new System.EventHandler(this.btnCloudMediaValidator_Click);
+                // 
                 // btnCloudFileCleaner
                 // 
                 this.btnCloudFileCleaner.BackColor = System.Drawing.Color.LightCoral;
                 this.btnCloudFileCleaner.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
                 this.btnCloudFileCleaner.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
-                this.btnCloudFileCleaner.Location = new System.Drawing.Point(50, 250);
+                this.btnCloudFileCleaner.Location = new System.Drawing.Point(50, 400); // 250'den 400'e değiştirildi
                 this.btnCloudFileCleaner.Name = "btnCloudFileCleaner";
                 this.btnCloudFileCleaner.Size = new System.Drawing.Size(350, 130);
-                this.btnCloudFileCleaner.TabIndex = 2;
+                this.btnCloudFileCleaner.TabIndex = 3;
                 this.btnCloudFileCleaner.Text = "Cloud File Cleaner\r\nClean and organize cloud storage";
                 this.btnCloudFileCleaner.UseVisualStyleBackColor = false;
                 this.btnCloudFileCleaner.Enabled = false;
@@ -108,8 +123,9 @@ namespace CloudStorageTools
                 // 
                 this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
                 this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-                this.ClientSize = new System.Drawing.Size(450, 420);
+                this.ClientSize = new System.Drawing.Size(450, 570); // 700'den 570'e düşürüldü
                 this.Controls.Add(this.btnCloudFileCleaner);
+                this.Controls.Add(this.btnCloudMediaValidator);
                 this.Controls.Add(this.btnVideoSizeFinder);
                 this.Controls.Add(this.lblTitle);
                 this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -123,6 +139,7 @@ namespace CloudStorageTools
 
             private System.Windows.Forms.Label lblTitle;
             private System.Windows.Forms.Button btnVideoSizeFinder;
+            private System.Windows.Forms.Button btnCloudMediaValidator;
             private System.Windows.Forms.Button btnCloudFileCleaner;
 
             private void btnVideoSizeFinder_Click(object sender, EventArgs e)
@@ -135,6 +152,20 @@ namespace CloudStorageTools
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error opening Video Size Finder: {ex.Message}",
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            private void btnCloudMediaValidator_Click(object sender, EventArgs e)
+            {
+                try
+                {
+                    var cloudMediaValidatorForm = new CloudMediaValidatorForm();
+                    cloudMediaValidatorForm.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error opening Cloud Media Validator: {ex.Message}",
                         "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
