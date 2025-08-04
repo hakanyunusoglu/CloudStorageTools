@@ -74,6 +74,9 @@
             this.btnDownloadCsvTemplate = new System.Windows.Forms.Button();
             this.btnUploadCsv = new System.Windows.Forms.Button();
             this.lblCsvInstructions = new System.Windows.Forms.Label();
+            this.grpValidationLog = new System.Windows.Forms.GroupBox();
+            this.btnClearLog = new System.Windows.Forms.Button();
+            this.rtbValidationLog = new System.Windows.Forms.RichTextBox();
             this.tabControl.SuspendLayout();
             this.tabPageConnection.SuspendLayout();
             this.pnlAzureConfig.SuspendLayout();
@@ -84,6 +87,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.dgvValidationResults)).BeginInit();
             this.grpValidationControl.SuspendLayout();
             this.grpCsvUpload.SuspendLayout();
+            this.grpValidationLog.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
@@ -94,7 +98,7 @@
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(1393, 907);
+            this.tabControl.Size = new System.Drawing.Size(1672, 907);
             this.tabControl.TabIndex = 0;
             // 
             // tabPageConnection
@@ -420,10 +424,11 @@
             this.tabPageValidation.Controls.Add(this.grpValidationResults);
             this.tabPageValidation.Controls.Add(this.grpValidationControl);
             this.tabPageValidation.Controls.Add(this.grpCsvUpload);
+            this.tabPageValidation.Controls.Add(this.grpValidationLog);
             this.tabPageValidation.Location = new System.Drawing.Point(4, 25);
             this.tabPageValidation.Name = "tabPageValidation";
             this.tabPageValidation.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageValidation.Size = new System.Drawing.Size(1385, 878);
+            this.tabPageValidation.Size = new System.Drawing.Size(1664, 878);
             this.tabPageValidation.TabIndex = 1;
             this.tabPageValidation.Text = "Media Validation";
             this.tabPageValidation.UseVisualStyleBackColor = true;
@@ -431,9 +436,9 @@
             // grpValidationResults
             // 
             this.grpValidationResults.Controls.Add(this.dgvValidationResults);
-            this.grpValidationResults.Location = new System.Drawing.Point(20, 350);
+            this.grpValidationResults.Location = new System.Drawing.Point(20, 360);
             this.grpValidationResults.Name = "grpValidationResults";
-            this.grpValidationResults.Size = new System.Drawing.Size(1344, 520);
+            this.grpValidationResults.Size = new System.Drawing.Size(1636, 510);
             this.grpValidationResults.TabIndex = 2;
             this.grpValidationResults.TabStop = false;
             this.grpValidationResults.Text = "Validation Results";
@@ -449,7 +454,7 @@
             this.dgvValidationResults.Name = "dgvValidationResults";
             this.dgvValidationResults.RowHeadersWidth = 51;
             this.dgvValidationResults.RowTemplate.Height = 24;
-            this.dgvValidationResults.Size = new System.Drawing.Size(1318, 489);
+            this.dgvValidationResults.Size = new System.Drawing.Size(1610, 489);
             this.dgvValidationResults.TabIndex = 0;
             // 
             // grpValidationControl
@@ -459,12 +464,13 @@
             this.grpValidationControl.Controls.Add(this.btnStartValidation);
             this.grpValidationControl.Controls.Add(this.progressBarValidation);
             this.grpValidationControl.Controls.Add(this.lblValidationStatus);
-            this.grpValidationControl.Location = new System.Drawing.Point(20, 200);
+            this.grpValidationControl.Location = new System.Drawing.Point(20, 214);
             this.grpValidationControl.Name = "grpValidationControl";
-            this.grpValidationControl.Size = new System.Drawing.Size(800, 130);
+            this.grpValidationControl.Size = new System.Drawing.Size(650, 140);
             this.grpValidationControl.TabIndex = 1;
             this.grpValidationControl.TabStop = false;
             this.grpValidationControl.Text = "Validation Control";
+            this.grpValidationControl.Enter += new System.EventHandler(this.grpValidationControl_Enter);
             // 
             // btnExportResults
             // 
@@ -538,7 +544,7 @@
             this.grpCsvUpload.Enabled = false;
             this.grpCsvUpload.Location = new System.Drawing.Point(20, 20);
             this.grpCsvUpload.Name = "grpCsvUpload";
-            this.grpCsvUpload.Size = new System.Drawing.Size(800, 160);
+            this.grpCsvUpload.Size = new System.Drawing.Size(650, 188);
             this.grpCsvUpload.TabIndex = 0;
             this.grpCsvUpload.TabStop = false;
             this.grpCsvUpload.Text = "CSV Upload";
@@ -557,7 +563,7 @@
             // 
             this.lblCsvStatus.AutoSize = true;
             this.lblCsvStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
-            this.lblCsvStatus.Location = new System.Drawing.Point(458, 75);
+            this.lblCsvStatus.Location = new System.Drawing.Point(24, 106);
             this.lblCsvStatus.Name = "lblCsvStatus";
             this.lblCsvStatus.Size = new System.Drawing.Size(132, 18);
             this.lblCsvStatus.TabIndex = 3;
@@ -600,11 +606,48 @@
             this.lblCsvInstructions.Text = "Upload a CSV file containing media names to validate their existence in cloud sto" +
     "rage.";
             // 
+            // grpValidationLog
+            // 
+            this.grpValidationLog.Controls.Add(this.btnClearLog);
+            this.grpValidationLog.Controls.Add(this.rtbValidationLog);
+            this.grpValidationLog.Location = new System.Drawing.Point(690, 20);
+            this.grpValidationLog.Name = "grpValidationLog";
+            this.grpValidationLog.Size = new System.Drawing.Size(966, 334);
+            this.grpValidationLog.TabIndex = 3;
+            this.grpValidationLog.TabStop = false;
+            this.grpValidationLog.Text = "Validation Log";
+            // 
+            // btnClearLog
+            // 
+            this.btnClearLog.BackColor = System.Drawing.Color.Orange;
+            this.btnClearLog.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnClearLog.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
+            this.btnClearLog.Location = new System.Drawing.Point(15, 285);
+            this.btnClearLog.Name = "btnClearLog";
+            this.btnClearLog.Size = new System.Drawing.Size(114, 35);
+            this.btnClearLog.TabIndex = 1;
+            this.btnClearLog.Text = "Clear Log";
+            this.btnClearLog.UseVisualStyleBackColor = false;
+            this.btnClearLog.Click += new System.EventHandler(this.btnClearLog_Click);
+            // 
+            // rtbValidationLog
+            // 
+            this.rtbValidationLog.BackColor = System.Drawing.Color.Black;
+            this.rtbValidationLog.Font = new System.Drawing.Font("Consolas", 9F);
+            this.rtbValidationLog.ForeColor = System.Drawing.Color.Lime;
+            this.rtbValidationLog.Location = new System.Drawing.Point(15, 25);
+            this.rtbValidationLog.Name = "rtbValidationLog";
+            this.rtbValidationLog.ReadOnly = true;
+            this.rtbValidationLog.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
+            this.rtbValidationLog.Size = new System.Drawing.Size(945, 250);
+            this.rtbValidationLog.TabIndex = 0;
+            this.rtbValidationLog.Text = "";
+            // 
             // CloudMediaValidatorForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1393, 907);
+            this.ClientSize = new System.Drawing.Size(1672, 907);
             this.Controls.Add(this.tabControl);
             this.MaximizeBox = false;
             this.Name = "CloudMediaValidatorForm";
@@ -626,6 +669,7 @@
             this.grpValidationControl.PerformLayout();
             this.grpCsvUpload.ResumeLayout(false);
             this.grpCsvUpload.PerformLayout();
+            this.grpValidationLog.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -684,5 +728,9 @@
 
         private System.Windows.Forms.GroupBox grpValidationResults;
         private System.Windows.Forms.DataGridView dgvValidationResults;
+
+        private System.Windows.Forms.GroupBox grpValidationLog;
+        private System.Windows.Forms.RichTextBox rtbValidationLog;
+        private System.Windows.Forms.Button btnClearLog;
     }
 }

@@ -23,6 +23,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
         private List<string> _mediaNames = new List<string>();
         private List<MediaValidationDto> _validationResults = new List<MediaValidationDto>();
+        private BindingList<MediaValidationDto> _bindingList;
 
         private CloudProviderType _currentProvider;
         private CloudConnectionConfig _connectionConfig;
@@ -30,6 +31,8 @@ namespace CloudStorageTools.CloudMediaValidator.Components
         // Key visibility flags
         private bool isAwsKeysVisible = false;
         private bool isAzureKeysVisible = false;
+
+        private bool _operationCancelled = false;
 
         public CloudMediaValidatorForm()
         {
@@ -52,6 +55,8 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
             // İlk durumda kontrolleri deaktif et
             EnableValidationControls(false);
+
+            AddLogMessage("Validation system ready...", Color.Cyan);
         }
 
         private void ConfigureDataGridView()
@@ -153,6 +158,48 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             }
         }
 
+        private void AddLogMessage(string message, Color? color = null)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(() => AddLogMessage(message, color)));
+                return;
+            }
+
+            try
+            {
+                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                string logLine = $"[{timestamp}] {message}\n";
+
+                // Renk ayarla
+                rtbValidationLog.SelectionStart = rtbValidationLog.TextLength;
+                rtbValidationLog.SelectionLength = 0;
+                rtbValidationLog.SelectionColor = color ?? Color.White;
+                rtbValidationLog.AppendText(logLine);
+
+                // En alta kaydır
+                rtbValidationLog.ScrollToCaret();
+
+                // Çok fazla log satırı varsa temizle
+                var lines = rtbValidationLog.Lines;
+                if (lines.Length > 1000)
+                {
+                    var lastLines = lines.Skip(lines.Length - 500).ToArray();
+                    rtbValidationLog.Lines = lastLines;
+                }
+            }
+            catch
+            {
+                // Log ekleme hatası varsa sessizce devam et
+            }
+        }
+
+        private void btnClearLog_Click(object sender, EventArgs e)
+        {
+            rtbValidationLog.Clear();
+            AddLogMessage("Log cleared", Color.Yellow);
+        }
+
         private void OnProviderChanged(object sender, EventArgs e)
         {
             if (sender is RadioButton rb && rb.Checked)
@@ -252,6 +299,8 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                             return;
                         }
 
+                        AddLogMessage($"Loading CSV file: {Path.GetFileName(csvPath)}", Color.Cyan);
+
                         _mediaNames = _validatorService.LoadMediaNamesFromCsv(csvPath);
 
                         if (_mediaNames.Count > 0)
@@ -267,11 +316,14 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                             lblMediaPreview.Text = $"Preview: {preview}";
 
                             EnableValidationControls(true);
+
+                            AddLogMessage($"Successfully loaded {_mediaNames.Count} media names from CSV", Color.Green);
                         }
                         else
                         {
                             lblCsvStatus.Text = "❌ No valid media names found in CSV";
                             lblCsvStatus.ForeColor = Color.Red;
+                            AddLogMessage("No valid media names found in CSV file", Color.Red);
                         }
                     }
                 }
@@ -280,6 +332,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             {
                 lblCsvStatus.Text = $"❌ Error loading CSV: {ex.Message}";
                 lblCsvStatus.ForeColor = Color.Red;
+                AddLogMessage($"Error loading CSV: {ex.Message}", Color.Red);
                 MessageBox.Show($"Error loading CSV file: {ex.Message}", "CSV Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -326,9 +379,16 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _validationResults.Clear();
+                _operationCancelled = false;
+
+                // BindingList oluştur ve DataGridView'e bağla
+                _bindingList = new BindingList<MediaValidationDto>(_validationResults);
+                dgvValidationResults.DataSource = _bindingList;
 
                 lblValidationStatus.Text = "Starting validation...";
                 lblValidationStatus.ForeColor = Color.Orange;
+
+                AddLogMessage($"Starting validation of {_mediaNames.Count} media files", Color.Yellow);
 
                 _validationResults = await _validatorService.ValidateMediaExistenceAsync(
                     _mediaNames,
@@ -348,7 +408,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                 if (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    // Sonuçları DataGridView'e bind et
+                    // Sonuçları DataGridView'e bind et (zaten bağlı ama güncellemek için)
                     var bindingList = new BindingList<MediaValidationDto>(_validationResults);
                     dgvValidationResults.DataSource = bindingList;
 
@@ -360,24 +420,25 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                     EnableValidationControls(true);
 
+                    AddLogMessage($"Validation completed! Found: {foundCount}/{totalCount}", Color.Green);
+
                     MessageBox.Show($"Validation completed!\n\nTotal: {totalCount}\nFound: {foundCount}\nNot Found: {totalCount - foundCount}",
                         "Validation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    lblValidationStatus.Text = "❌ Validation cancelled";
-                    lblValidationStatus.ForeColor = Color.Orange;
+                    await HandleCancelledValidation(_validationResults.Count);
                 }
             }
             catch (OperationCanceledException)
             {
-                lblValidationStatus.Text = "❌ Validation cancelled";
-                lblValidationStatus.ForeColor = Color.Orange;
+                await HandleCancelledValidation(_validationResults.Count);
             }
             catch (Exception ex)
             {
                 lblValidationStatus.Text = $"❌ Validation failed: {ex.Message}";
                 lblValidationStatus.ForeColor = Color.Red;
+                AddLogMessage($"Validation failed: {ex.Message}", Color.Red);
                 MessageBox.Show($"Validation error: {ex.Message}", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -388,18 +449,95 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             }
         }
 
+        private async System.Threading.Tasks.Task HandleCancelledValidation(int completedCount)
+        {
+            _operationCancelled = true;
+            lblValidationStatus.Text = $"⚠️ Validation cancelled - {completedCount} files processed";
+            lblValidationStatus.ForeColor = Color.Orange;
+
+            AddLogMessage($"Validation cancelled - {completedCount} files were processed", Color.Orange);
+
+            if (_validationResults.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"Validation was cancelled, but {_validationResults.Count} files were successfully processed.\n\nWould you like to save the partial results to Excel?",
+                    "Save Partial Results?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    await ExportValidationToExcelAsync();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Validation was cancelled and no files were processed.",
+                    "Validation Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
         private void UpdateValidationProgress(int processed, int total, string currentMedia)
         {
             progressBarValidation.Value = processed;
-            lblValidationStatus.Text = currentMedia;
+            lblValidationStatus.Text = $"Processing {processed}/{total}: {currentMedia}";
+
+            // Log mesajını ekle
+            AddLogMessage($"Processing ({processed}/{total}): {currentMedia}", Color.White);
 
             // Gerçek zamanlı sonuçları göster (opsiyonel)
             this.Text = $"Cloud Media Validator - {processed}/{total} processed";
+
+            // DataGridView'i güncelle - BindingList otomatik güncellenir
+            if (_bindingList != null && dgvValidationResults.Rows.Count > 0)
+            {
+                try
+                {
+                    // Son eklenen kayıtları görünür yap
+                    int lastRowIndex = dgvValidationResults.Rows.Count - 1;
+
+                    // Auto scroll to last item
+                    if (lastRowIndex >= 0)
+                    {
+                        dgvValidationResults.FirstDisplayedScrollingRowIndex = Math.Max(0, lastRowIndex - 10);
+                        dgvValidationResults.ClearSelection();
+                        dgvValidationResults.Rows[lastRowIndex].Selected = true;
+
+                        // Son satırın rengini güncelle
+                        var lastResult = _bindingList[lastRowIndex];
+                        var lastRow = dgvValidationResults.Rows[lastRowIndex];
+
+                        if (!string.IsNullOrEmpty(lastResult.ErrorMessage))
+                        {
+                            lastRow.Cells["Status"].Value = "ERROR";
+                            lastRow.DefaultCellStyle.BackColor = Color.FromArgb(255, 220, 220);
+                        }
+                        else if (lastResult.IsExist)
+                        {
+                            lastRow.Cells["Status"].Value = "FOUND";
+                            lastRow.DefaultCellStyle.BackColor = Color.FromArgb(220, 255, 220);
+                        }
+                        else
+                        {
+                            lastRow.Cells["Status"].Value = "NOT FOUND";
+                            lastRow.DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 220);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Scroll hatası varsa log'a yaz ama sessizce devam et
+                    AddLogMessage($"UI update error: {ex.Message}", Color.Red);
+                }
+            }
+
+            // UI'yi zorla yenile
+            dgvValidationResults.Refresh();
+            Application.DoEvents();
         }
 
         private void btnCancelValidation_Click(object sender, EventArgs e)
         {
             _cancellationTokenSource?.Cancel();
+            AddLogMessage("Validation cancellation requested...", Color.Yellow);
         }
 
         private async void btnExportResults_Click(object sender, EventArgs e)
@@ -410,6 +548,11 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                 return;
             }
 
+            await ExportValidationToExcelAsync();
+        }
+
+        private async System.Threading.Tasks.Task ExportValidationToExcelAsync()
+        {
             try
             {
                 using (SaveFileDialog saveFileDialog = new SaveFileDialog())
@@ -423,10 +566,14 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                         lblValidationStatus.Text = "Exporting to Excel...";
                         lblValidationStatus.ForeColor = Color.Orange;
 
+                        AddLogMessage("Exporting results to Excel...", Color.Cyan);
+
                         await _validatorService.ExportValidationResultsToExcelAsync(_validationResults, saveFileDialog.FileName);
 
                         lblValidationStatus.Text = "✅ Excel export completed";
                         lblValidationStatus.ForeColor = Color.Green;
+
+                        AddLogMessage($"Excel export completed: {Path.GetFileName(saveFileDialog.FileName)}", Color.Green);
 
                         var result = MessageBox.Show(
                             $"Validation results exported successfully to:\n{saveFileDialog.FileName}\n\nWould you like to open the file?",
@@ -443,9 +590,11 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             {
                 lblValidationStatus.Text = $"❌ Export failed: {ex.Message}";
                 lblValidationStatus.ForeColor = Color.Red;
+                AddLogMessage($"Export failed: {ex.Message}", Color.Red);
                 MessageBox.Show($"Failed to export results: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
 
         // Key visibility methods (copy from VideoSizeFinderForm)
         private void btnVisibleKey_Click(object sender, EventArgs e)
@@ -562,6 +711,11 @@ namespace CloudStorageTools.CloudMediaValidator.Components
         }
 
         private void lblValidationStatus_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void grpValidationControl_Enter(object sender, EventArgs e)
         {
 
         }
