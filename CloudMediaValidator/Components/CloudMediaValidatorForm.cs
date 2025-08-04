@@ -11,6 +11,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CloudStorageTools.CloudMediaValidator.Components
@@ -360,6 +361,22 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             }
         }
 
+        private async void btnCancelValidation_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to cancel the validation process?\n\nYou can save partial results if any files have been processed.",
+                "Cancel Validation",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                _cancellationTokenSource?.Cancel();
+                AddLogMessage("Validation cancellation requested...", Color.Yellow);
+            }
+        }
+
+        // btnStartValidation_Click metodundaki catch bloklarını da güncelle:
         private async void btnStartValidation_Click(object sender, EventArgs e)
         {
             if (_mediaNames.Count == 0)
@@ -381,8 +398,8 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                 _validationResults.Clear();
                 _operationCancelled = false;
 
-                // BindingList oluştur ve DataGridView'e bağla
-                _bindingList = new BindingList<MediaValidationDto>(_validationResults);
+                // BindingList oluştur ve DataGridView'e bağla - ÖNCE CLEAR ET
+                _bindingList = new BindingList<MediaValidationDto>();
                 dgvValidationResults.DataSource = _bindingList;
 
                 lblValidationStatus.Text = "Starting validation...";
@@ -390,8 +407,10 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                 AddLogMessage($"Starting validation of {_mediaNames.Count} media files", Color.Yellow);
 
-                _validationResults = await _validatorService.ValidateMediaExistenceAsync(
+                // Doğrulama servisini real-time güncelleme ile çağır
+                await _validatorService.ValidateMediaExistenceWithRealtimeBinding(
                     _mediaNames,
+                    _bindingList,
                     (processed, total, currentMedia) =>
                     {
                         // UI thread'de çalıştır
@@ -408,9 +427,12 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                 if (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    // Sonuçları DataGridView'e bind et (zaten bağlı ama güncellemek için)
-                    var bindingList = new BindingList<MediaValidationDto>(_validationResults);
-                    dgvValidationResults.DataSource = bindingList;
+                    // _validationResults'ı _bindingList'den güncelle
+                    _validationResults.Clear();
+                    foreach (var item in _bindingList)
+                    {
+                        _validationResults.Add(item);
+                    }
 
                     int foundCount = _validationResults.Count(r => r.IsExist);
                     int totalCount = _validationResults.Count;
@@ -427,12 +449,12 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                 }
                 else
                 {
-                    await HandleCancelledValidation(_validationResults.Count);
+                    await HandleCancelledValidation(_bindingList?.Count ?? 0);
                 }
             }
             catch (OperationCanceledException)
             {
-                await HandleCancelledValidation(_validationResults.Count);
+                await HandleCancelledValidation(_bindingList?.Count ?? 0);
             }
             catch (Exception ex)
             {
@@ -449,7 +471,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             }
         }
 
-        private async System.Threading.Tasks.Task HandleCancelledValidation(int completedCount)
+        private async Task HandleCancelledValidation(int completedCount)
         {
             _operationCancelled = true;
             lblValidationStatus.Text = $"⚠️ Validation cancelled - {completedCount} files processed";
@@ -457,8 +479,15 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
             AddLogMessage($"Validation cancelled - {completedCount} files were processed", Color.Orange);
 
-            if (_validationResults.Count > 0)
+            // _bindingList'ten _validationResults'ı güncelle
+            if (_bindingList != null && _bindingList.Count > 0)
             {
+                _validationResults.Clear();
+                foreach (var item in _bindingList)
+                {
+                    _validationResults.Add(item);
+                }
+
                 var result = MessageBox.Show(
                     $"Validation was cancelled, but {_validationResults.Count} files were successfully processed.\n\nWould you like to save the partial results to Excel?",
                     "Save Partial Results?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -474,6 +503,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                     "Validation Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
+
 
         private void UpdateValidationProgress(int processed, int total, string currentMedia)
         {
@@ -533,13 +563,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             dgvValidationResults.Refresh();
             Application.DoEvents();
         }
-
-        private void btnCancelValidation_Click(object sender, EventArgs e)
-        {
-            _cancellationTokenSource?.Cancel();
-            AddLogMessage("Validation cancellation requested...", Color.Yellow);
-        }
-
+       
         private async void btnExportResults_Click(object sender, EventArgs e)
         {
             if (_validationResults.Count == 0)
@@ -551,7 +575,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
             await ExportValidationToExcelAsync();
         }
 
-        private async System.Threading.Tasks.Task ExportValidationToExcelAsync()
+        private async Task ExportValidationToExcelAsync()
         {
             try
             {
@@ -559,7 +583,10 @@ namespace CloudStorageTools.CloudMediaValidator.Components
                 {
                     saveFileDialog.Filter = "Excel files (*.xlsx)|*.xlsx";
                     saveFileDialog.Title = "Save Validation Results";
-                    saveFileDialog.FileName = $"MediaValidation_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                    // Dosya adına partial veya cancelled durumunu belirt
+                    string prefix = _operationCancelled ? "PartialValidation" : "MediaValidation";
+                    saveFileDialog.FileName = $"{prefix}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
                     if (saveFileDialog.ShowDialog() == DialogResult.OK)
                     {
@@ -568,6 +595,7 @@ namespace CloudStorageTools.CloudMediaValidator.Components
 
                         AddLogMessage("Exporting results to Excel...", Color.Cyan);
 
+                        // Export işlemini servis üzerinden yap
                         await _validatorService.ExportValidationResultsToExcelAsync(_validationResults, saveFileDialog.FileName);
 
                         lblValidationStatus.Text = "✅ Excel export completed";

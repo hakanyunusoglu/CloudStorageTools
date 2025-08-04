@@ -452,6 +452,95 @@ public class CloudMediaValidatorService
         }
     }
 
+    public async Task ValidateMediaExistenceWithRealtimeBinding(
+    List<string> mediaNames,
+    BindingList<MediaValidationDto> bindingList,
+    Action<int, int, string> progressCallback = null,
+    CancellationToken cancellationToken = default)
+    {
+        int processed = 0;
+        int total = mediaNames.Count;
+
+        progressCallback?.Invoke(processed, total, "Doğrulama başlatılıyor...");
+
+        foreach (string mediaName in mediaNames)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var validationResult = new MediaValidationDto
+            {
+                MediaName = mediaName,
+                IsExist = false,
+                ErrorMessage = null
+            };
+
+            try
+            {
+                progressCallback?.Invoke(processed, total, $"Kontrol ediliyor: {mediaName}");
+
+                // Cloud'da medya varlığını kontrol et
+                bool exists = await _cloudMediaService.MediaExistsAsync(mediaName);
+
+                if (exists)
+                {
+                    validationResult.IsExist = true;
+                    validationResult.FoundWithExtension = mediaName;
+
+                    // Detayları al
+                    try
+                    {
+                        var details = await _cloudMediaService.GetMediaDetailsAsync(mediaName);
+                        validationResult.FileSize = details.Size;
+                        validationResult.FileSizeFormatted = details.SizeFormatted;
+                        validationResult.ContentType = details.ContentType;
+                        validationResult.LastModified = details.LastModified;
+                    }
+                    catch { /* Detay alınamazsa sadece varlığı işaretle */ }
+                }
+                else
+                {
+                    // Eğer direkt medya bulunamazsa, farklı uzantılarla da dene
+                    var (found, foundExtension, details) = await TryWithDifferentExtensions(mediaName);
+                    validationResult.IsExist = found;
+
+                    if (found)
+                    {
+                        validationResult.FoundWithExtension = foundExtension;
+                        if (details != null)
+                        {
+                            validationResult.FileSize = details.Size;
+                            validationResult.FileSizeFormatted = details.SizeFormatted;
+                            validationResult.ContentType = details.ContentType;
+                            validationResult.LastModified = details.LastModified;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                validationResult.IsExist = false;
+                validationResult.ErrorMessage = ex.Message;
+            }
+
+            // Real-time güncelleme: BindingList'e ekle (UI otomatik güncellenecek)
+            bindingList.Add(validationResult);
+
+            processed++;
+
+            // Her kayıt sonrası callback çağır
+            string status = validationResult.IsExist ? "BULUNDU" :
+                           !string.IsNullOrEmpty(validationResult.ErrorMessage) ? "HATA" : "BULUNAMADI";
+
+            progressCallback?.Invoke(processed, total,
+                $"İşlenen: {processed}/{total} - {mediaName} ({status})");
+
+            // Kısa bir bekleme ekle (rate limiting için)
+            await Task.Delay(50, cancellationToken);
+        }
+
+        progressCallback?.Invoke(total, total, $"Doğrulama tamamlandı. {bindingList.Count(r => r.IsExist)} medya bulundu.");
+    }
+
     /// <summary>
     /// Medya doğrulama CSV şablonunu oluşturur
     /// </summary>
