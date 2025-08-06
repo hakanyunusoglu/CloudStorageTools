@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,74 @@ namespace CloudStorageTools.VideoSizeFinder.Services
         public MediaResizerService()
         {
             _imageResizeService = new ImageResizeService();
+        }
+
+        // Dosya boyutunu parse eden yardımcı method
+        private long ParseFileSize(string fileSizeStr)
+        {
+            if (string.IsNullOrWhiteSpace(fileSizeStr))
+                return 0;
+
+            fileSizeStr = fileSizeStr.Trim().ToUpper();
+
+            // Eğer sadece sayı ise (bytes olarak kabul et)
+            if (long.TryParse(fileSizeStr, out long bytesValue))
+            {
+                return bytesValue;
+            }
+
+            // Regex ile sayı ve birim ayır
+            var match = Regex.Match(fileSizeStr, @"^(\d+(?:\.\d+)?)\s*([KMGT]?B?)$");
+            if (!match.Success)
+            {
+                // Fallback: sadece sayısal kısmı al
+                var numberMatch = Regex.Match(fileSizeStr, @"(\d+(?:\.\d+)?)");
+                if (numberMatch.Success && double.TryParse(numberMatch.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double fallbackValue))
+                {
+                    return (long)fallbackValue; // Bytes olarak kabul et
+                }
+                return 0;
+            }
+
+            if (!double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double size))
+                return 0;
+
+            string unit = match.Groups[2].Value;
+
+            long result;
+            switch (unit)
+            {
+                case "KB":
+                case "K":
+                    result = (long)(size * 1024);
+                    break;
+
+                case "MB":
+                case "M":
+                    result = (long)(size * 1024 * 1024);
+                    break;
+
+                case "GB":
+                case "G":
+                    result = (long)(size * 1024 * 1024 * 1024);
+                    break;
+
+                case "TB":
+                case "T":
+                    result = (long)(size * 1024L * 1024 * 1024 * 1024);
+                    break;
+
+                case "B":
+                case "":
+                    result = (long)size;
+                    break;
+
+                default:
+                    result = (long)size; // bilinmeyen birim
+                    break;
+            }
+
+            return result;
         }
 
         public List<MediaResizerDto> LoadMediaListFromCsv(string csvFilePath, bool createUrlMode = false, string baseUrl = "", string token = "")
@@ -77,19 +146,17 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                             // URL'yi işle
                             string processedUrl = ProcessMediaUrl(mediaUrlOrPath, createUrlMode, baseUrl, token);
 
+                            // Dosya boyutunu parse et (düzeltilmiş kısım)
+                            long fileSize = ParseFileSize(fileSizeStr);
+
                             var mediaItem = new MediaResizerDto
                             {
                                 MediaName = mediaName,
                                 MediaUrl = processedUrl,
+                                MediaFileSize = fileSize,
+                                MediaFileSizeFormatted = _imageResizeService.FormatFileSize(fileSize),
                                 ProcessingStatus = "Pending"
                             };
-
-                            // Dosya boyutunu parse et
-                            if (long.TryParse(fileSizeStr, out long fileSize))
-                            {
-                                mediaItem.MediaFileSize = fileSize;
-                                mediaItem.MediaFileSizeFormatted = _imageResizeService.FormatFileSize(fileSize);
-                            }
 
                             mediaList.Add(mediaItem);
                         }
@@ -104,7 +171,6 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             return mediaList;
         }
 
-        // LoadMediaListFromExcel metodunu da aynı şekilde güncelle
         public List<MediaResizerDto> LoadMediaListFromExcel(string excelFilePath, bool createUrlMode = false, string baseUrl = "", string token = "")
         {
             var mediaList = new List<MediaResizerDto>();
@@ -152,19 +218,17 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                             // URL'yi işle
                             string processedUrl = ProcessMediaUrl(mediaUrlOrPath, createUrlMode, baseUrl, token);
 
+                            // Dosya boyutunu parse et (düzeltilmiş kısım)
+                            long fileSize = ParseFileSize(fileSizeStr);
+
                             var mediaItem = new MediaResizerDto
                             {
                                 MediaName = mediaName,
                                 MediaUrl = processedUrl,
+                                MediaFileSize = fileSize,
+                                MediaFileSizeFormatted = _imageResizeService.FormatFileSize(fileSize),
                                 ProcessingStatus = "Pending"
                             };
-
-                            // Dosya boyutunu parse et
-                            if (long.TryParse(fileSizeStr, out long fileSize))
-                            {
-                                mediaItem.MediaFileSize = fileSize;
-                                mediaItem.MediaFileSizeFormatted = _imageResizeService.FormatFileSize(fileSize);
-                            }
 
                             mediaList.Add(mediaItem);
                         }
