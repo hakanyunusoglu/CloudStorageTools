@@ -24,7 +24,7 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             _imageResizeService = new ImageResizeService();
         }
 
-        public List<MediaResizerDto> LoadMediaListFromCsv(string csvFilePath)
+        public List<MediaResizerDto> LoadMediaListFromCsv(string csvFilePath, bool createUrlMode = false, string baseUrl = "", string token = "")
         {
             var mediaList = new List<MediaResizerDto>();
 
@@ -49,7 +49,8 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                         string.Equals(h, "MediaUrl", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(h, "Media Url", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(h, "URL", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(h, "Url", StringComparison.OrdinalIgnoreCase));
+                        string.Equals(h, "Url", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(h, "Path", StringComparison.OrdinalIgnoreCase));
 
                     string fileSizeHeader = headers?.FirstOrDefault(h =>
                         string.Equals(h, "MediaFileSize", StringComparison.OrdinalIgnoreCase) ||
@@ -59,21 +60,27 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
                     if (string.IsNullOrEmpty(mediaNameHeader) || string.IsNullOrEmpty(mediaUrlHeader) || string.IsNullOrEmpty(fileSizeHeader))
                     {
-                        throw new Exception("CSV dosyasında gerekli sütunlar bulunamadı. Gerekli sütunlar: MediaName, MediaUrl, MediaFileSize");
+                        string requiredColumns = createUrlMode
+                            ? "MediaName, MediaUrl/Path, MediaFileSize"
+                            : "MediaName, MediaUrl, MediaFileSize";
+                        throw new Exception($"CSV dosyasında gerekli sütunlar bulunamadı. Gerekli sütunlar: {requiredColumns}");
                     }
 
                     while (csv.Read())
                     {
                         string mediaName = csv.GetField(mediaNameHeader)?.Trim();
-                        string mediaUrl = csv.GetField(mediaUrlHeader)?.Trim();
+                        string mediaUrlOrPath = csv.GetField(mediaUrlHeader)?.Trim();
                         string fileSizeStr = csv.GetField(fileSizeHeader)?.Trim();
 
-                        if (!string.IsNullOrWhiteSpace(mediaName) && !string.IsNullOrWhiteSpace(mediaUrl))
+                        if (!string.IsNullOrWhiteSpace(mediaName) && !string.IsNullOrWhiteSpace(mediaUrlOrPath))
                         {
+                            // URL'yi işle
+                            string processedUrl = ProcessMediaUrl(mediaUrlOrPath, createUrlMode, baseUrl, token);
+
                             var mediaItem = new MediaResizerDto
                             {
                                 MediaName = mediaName,
-                                MediaUrl = mediaUrl,
+                                MediaUrl = processedUrl,
                                 ProcessingStatus = "Pending"
                             };
 
@@ -97,7 +104,8 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             return mediaList;
         }
 
-        public List<MediaResizerDto> LoadMediaListFromExcel(string excelFilePath)
+        // LoadMediaListFromExcel metodunu da aynı şekilde güncelle
+        public List<MediaResizerDto> LoadMediaListFromExcel(string excelFilePath, bool createUrlMode = false, string baseUrl = "", string token = "")
         {
             var mediaList = new List<MediaResizerDto>();
 
@@ -121,27 +129,33 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
                     // Gerekli sütun indekslerini bul
                     int mediaNameCol = GetColumnIndex(headers, new[] { "medianame", "media name", "filename", "file name" });
-                    int mediaUrlCol = GetColumnIndex(headers, new[] { "mediaurl", "media url", "url" });
+                    int mediaUrlCol = GetColumnIndex(headers, new[] { "mediaurl", "media url", "url", "path" });
                     int fileSizeCol = GetColumnIndex(headers, new[] { "mediafilesize", "media file size", "filesize", "file size" });
 
                     if (mediaNameCol == -1 || mediaUrlCol == -1 || fileSizeCol == -1)
                     {
-                        throw new Exception("Excel dosyasında gerekli sütunlar bulunamadı. Gerekli sütunlar: MediaName, MediaUrl, MediaFileSize");
+                        string requiredColumns = createUrlMode
+                            ? "MediaName, MediaUrl/Path, MediaFileSize"
+                            : "MediaName, MediaUrl, MediaFileSize";
+                        throw new Exception($"Excel dosyasında gerekli sütunlar bulunamadı. Gerekli sütunlar: {requiredColumns}");
                     }
 
                     // Veri satırlarını oku
                     for (int row = 2; row <= rowCount; row++)
                     {
                         string mediaName = worksheet.Cells[row, mediaNameCol].Value?.ToString()?.Trim();
-                        string mediaUrl = worksheet.Cells[row, mediaUrlCol].Value?.ToString()?.Trim();
+                        string mediaUrlOrPath = worksheet.Cells[row, mediaUrlCol].Value?.ToString()?.Trim();
                         string fileSizeStr = worksheet.Cells[row, fileSizeCol].Value?.ToString()?.Trim();
 
-                        if (!string.IsNullOrWhiteSpace(mediaName) && !string.IsNullOrWhiteSpace(mediaUrl))
+                        if (!string.IsNullOrWhiteSpace(mediaName) && !string.IsNullOrWhiteSpace(mediaUrlOrPath))
                         {
+                            // URL'yi işle
+                            string processedUrl = ProcessMediaUrl(mediaUrlOrPath, createUrlMode, baseUrl, token);
+
                             var mediaItem = new MediaResizerDto
                             {
                                 MediaName = mediaName,
-                                MediaUrl = mediaUrl,
+                                MediaUrl = processedUrl,
                                 ProcessingStatus = "Pending"
                             };
 
@@ -255,6 +269,52 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             }
 
             progressCallback?.Invoke(total, total, $"İşleme tamamlandı. {mediaList.Count(m => m.NeedsResize)} medya resize edildi.");
+        }
+
+        private string ProcessMediaUrl(string mediaUrl, bool createUrlMode, string baseUrl, string token)
+        {
+            if (!createUrlMode)
+            {
+                // URL zaten var, doğrudan döndür
+                return mediaUrl;
+            }
+
+            // URL oluştur
+            return CreateFullUrl(mediaUrl, baseUrl, token);
+        }
+
+        private string CreateFullUrl(string mediaPath, string baseUrl, string token)
+        {
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                throw new ArgumentException("Base URL cannot be empty when Create URL mode is selected.");
+            }
+
+            // Base URL'nin sonuna '/' ekle (yoksa)
+            string processedBaseUrl = baseUrl.TrimEnd('/');
+            if (!string.IsNullOrEmpty(processedBaseUrl))
+            {
+                processedBaseUrl += "/";
+            }
+
+            // Media URL'nin başında ve sonundaki '/' karakterlerini kaldır
+            string processedMediaPath = mediaPath?.Trim('/', ' ') ?? "";
+
+            // Token işleme
+            string processedToken = "";
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                processedToken = token.Trim();
+                if (!processedToken.StartsWith("?"))
+                {
+                    processedToken = "?" + processedToken;
+                }
+            }
+
+            // Final URL'yi oluştur
+            string finalUrl = processedBaseUrl + processedMediaPath + processedToken;
+
+            return finalUrl;
         }
 
         public async Task ExportResultsToExcelAsync(List<MediaResizerDto> results, string filePath)

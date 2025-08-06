@@ -1053,13 +1053,28 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                         lblResizerStatus.Text = "Loading file...";
                         lblResizerStatus.ForeColor = Color.Orange;
 
+                        // URL mode parametrelerini hazırla
+                        bool createUrlMode = rbCreateUrl.Checked;
+                        string baseUrl = createUrlMode ? txtBaseUrl.Text.Trim() : "";
+                        string token = createUrlMode ? txtToken.Text.Trim() : "";
+
+                        // Create URL mode seçilmişse Base URL zorunlu kontrolü
+                        if (createUrlMode && string.IsNullOrWhiteSpace(baseUrl))
+                        {
+                            MessageBox.Show("Base URL is required when 'Create URL' mode is selected!",
+                                "Missing Base URL", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            lblResizerStatus.Text = "❌ Base URL required";
+                            lblResizerStatus.ForeColor = Color.Red;
+                            return;
+                        }
+
                         if (extension == ".csv")
                         {
-                            _mediaResizerList = _mediaResizerService.LoadMediaListFromCsv(filePath);
+                            _mediaResizerList = _mediaResizerService.LoadMediaListFromCsv(filePath, createUrlMode, baseUrl, token);
                         }
                         else if (extension == ".xlsx")
                         {
-                            _mediaResizerList = _mediaResizerService.LoadMediaListFromExcel(filePath);
+                            _mediaResizerList = _mediaResizerService.LoadMediaListFromExcel(filePath, createUrlMode, baseUrl, token);
                         }
                         else
                         {
@@ -1070,9 +1085,35 @@ namespace CloudStorageTools.VideoSizeFinder.Components
 
                         if (_mediaResizerList.Count > 0)
                         {
-                            lblResizerStatus.Text = $"✅ {_mediaResizerList.Count} media items loaded";
+                            string modeText = createUrlMode ? " (URLs created)" : " (URLs as-is)";
+                            lblResizerStatus.Text = $"✅ {_mediaResizerList.Count} media items loaded{modeText}";
                             lblResizerStatus.ForeColor = Color.Green;
                             EnableResizerControls(true);
+
+                            // İlk birkaç URL'yi preview olarak göster (opsiyonel)
+                            if (_mediaResizerList.Count > 0)
+                            {
+                                string previewUrls = string.Join("\n", _mediaResizerList.Take(3).Select(m => m.MediaUrl));
+                                if (_mediaResizerList.Count > 3)
+                                {
+                                    previewUrls += $"\n... (+{_mediaResizerList.Count - 3} more)";
+                                }
+
+                                // Preview için bir tooltip veya label kullanılabilir
+                                string previewMessage = createUrlMode
+                                    ? $"URLs created using Base URL: {baseUrl}\nSample URLs:\n{previewUrls}"
+                                    : $"Using existing URLs from file\nSample URLs:\n{previewUrls}";
+
+                                // Bu bilgiyi kullanıcıya göstermek için opsiyonel bir dialog
+                                if (MessageBox.Show($"Media list loaded successfully!\n\n{previewMessage}\n\nDo you want to continue?",
+                                    "Media List Loaded", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.No)
+                                {
+                                    _mediaResizerList.Clear();
+                                    lblResizerStatus.Text = "Operation cancelled";
+                                    lblResizerStatus.ForeColor = Color.Orange;
+                                    return;
+                                }
+                            }
                         }
                         else
                         {
@@ -1333,5 +1374,67 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        private void rbUrlAlreadyExists_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rbUrlAlreadyExists.Checked)
+            {
+                grpUrlCreation.Enabled = false;
+                lblResizerInstructions.Text = "Upload CSV or Excel file with MediaName, MediaUrl (complete URL), MediaFileSize columns.";
+
+                // Opsiyonel: Mevcut listeyi temizle
+                if (_mediaResizerList.Count > 0)
+                {
+                    var result = MessageBox.Show("URL mode changed. Current media list will be cleared. Continue?",
+                        "Clear Media List", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        _mediaResizerList.Clear();
+                        lblResizerStatus.Text = "Media list cleared due to URL mode change";
+                        lblResizerStatus.ForeColor = Color.Orange;
+                        EnableResizerControls(false);
+                    }
+                    else
+                    {
+                        // Kullanıcı cancel dedi, eski seçimi geri getir
+                        rbCreateUrl.Checked = true;
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void rbCreateUrl_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rbCreateUrl.Checked)
+            {
+                grpUrlCreation.Enabled = true;
+                lblResizerInstructions.Text = "Upload CSV or Excel file with MediaName, MediaUrl (path only), MediaFileSize columns. Full URLs will be created using Base URL + Path + Token.";
+
+                // Base URL alanına focus ver
+                txtBaseUrl.Focus();
+
+                // Opsiyonel: Mevcut listeyi temizle
+                if (_mediaResizerList.Count > 0)
+                {
+                    var result = MessageBox.Show("URL mode changed. Current media list will be cleared. Continue?",
+                        "Clear Media List", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        _mediaResizerList.Clear();
+                        lblResizerStatus.Text = "Media list cleared due to URL mode change";
+                        lblResizerStatus.ForeColor = Color.Orange;
+                        EnableResizerControls(false);
+                    }
+                    else
+                    {
+                        // Kullanıcı cancel dedi, eski seçimi geri getir
+                        rbUrlAlreadyExists.Checked = true;
+                        return;
+                    }
+                }
+            }
+        }   
     }
 }
