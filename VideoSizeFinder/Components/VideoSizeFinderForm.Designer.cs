@@ -172,7 +172,7 @@
             this.tabPageConnection.Location = new System.Drawing.Point(4, 25);
             this.tabPageConnection.Name = "tabPageConnection";
             this.tabPageConnection.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageConnection.Size = new System.Drawing.Size(1375, 912);
+            this.tabPageConnection.Size = new System.Drawing.Size(1375, 854);
             this.tabPageConnection.TabIndex = 0;
             this.tabPageConnection.Text = "Connection";
             this.tabPageConnection.UseVisualStyleBackColor = true;
@@ -490,7 +490,7 @@
             this.tabPageSearch.Location = new System.Drawing.Point(4, 25);
             this.tabPageSearch.Name = "tabPageSearch";
             this.tabPageSearch.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageSearch.Size = new System.Drawing.Size(1375, 912);
+            this.tabPageSearch.Size = new System.Drawing.Size(1375, 854);
             this.tabPageSearch.TabIndex = 1;
             this.tabPageSearch.Text = "Search Media";
             this.tabPageSearch.UseVisualStyleBackColor = true;
@@ -721,7 +721,7 @@
             this.tabPageAnalysis.Location = new System.Drawing.Point(4, 25);
             this.tabPageAnalysis.Name = "tabPageAnalysis";
             this.tabPageAnalysis.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageAnalysis.Size = new System.Drawing.Size(1375, 912);
+            this.tabPageAnalysis.Size = new System.Drawing.Size(1375, 854);
             this.tabPageAnalysis.TabIndex = 2;
             this.tabPageAnalysis.Text = "Analysis & Download";
             this.tabPageAnalysis.UseVisualStyleBackColor = true;
@@ -991,7 +991,7 @@
             this.grpUrlCreation.Controls.Add(this.lblToken);
             this.grpUrlCreation.Controls.Add(this.txtBaseUrl);
             this.grpUrlCreation.Controls.Add(this.lblBaseUrl);
-            this.grpUrlCreation.Enabled = false;
+            this.grpUrlCreation.Enabled = true;
             this.grpUrlCreation.Location = new System.Drawing.Point(20, 210);
             this.grpUrlCreation.Name = "grpUrlCreation";
             this.grpUrlCreation.Size = new System.Drawing.Size(560, 100);
@@ -1005,7 +1005,8 @@
             this.txtToken.Name = "txtToken";
             this.txtToken.Size = new System.Drawing.Size(440, 22);
             this.txtToken.TabIndex = 3;
-            this.txtToken.Text = "?token=example";
+            this.txtToken.Text = "?sv=2023-01-03&st=2025-07-18T12%3A35%3A40Z&se=2099-07-19T12%3A35%3A00Z&sr=c&sp=ra" +
+    "cwdxltf&sig=vVD1g27eb04WDY%2B5cqhjtTXA4aOzBq42qf0d4f40%2Fd0%3D";
             // 
             // lblToken
             // 
@@ -1022,7 +1023,7 @@
             this.txtBaseUrl.Name = "txtBaseUrl";
             this.txtBaseUrl.Size = new System.Drawing.Size(440, 22);
             this.txtBaseUrl.TabIndex = 1;
-            this.txtBaseUrl.Text = "https://example.com";
+            this.txtBaseUrl.Text = "https://img-adl.sm.mncdn.com/cdnimages/products";
             // 
             // lblBaseUrl
             // 
@@ -1047,6 +1048,7 @@
             // rbCreateUrl
             // 
             this.rbCreateUrl.AutoSize = true;
+            this.rbCreateUrl.Checked = true;
             this.rbCreateUrl.Location = new System.Drawing.Point(180, 20);
             this.rbCreateUrl.Name = "rbCreateUrl";
             this.rbCreateUrl.Size = new System.Drawing.Size(98, 20);
@@ -1058,7 +1060,7 @@
             // rbUrlAlreadyExists
             // 
             this.rbUrlAlreadyExists.AutoSize = true;
-            this.rbUrlAlreadyExists.Checked = true;
+            this.rbUrlAlreadyExists.Checked = false;
             this.rbUrlAlreadyExists.Location = new System.Drawing.Point(20, 20);
             this.rbUrlAlreadyExists.Name = "rbUrlAlreadyExists";
             this.rbUrlAlreadyExists.Size = new System.Drawing.Size(143, 20);
@@ -1137,7 +1139,7 @@
             this.numQuality.Size = new System.Drawing.Size(80, 22);
             this.numQuality.TabIndex = 9;
             this.numQuality.Value = new decimal(new int[] {
-            85,
+            90,
             0,
             0,
             0});
@@ -1168,7 +1170,7 @@
             this.numTargetHeight.Size = new System.Drawing.Size(80, 22);
             this.numTargetHeight.TabIndex = 7;
             this.numTargetHeight.Value = new decimal(new int[] {
-            1080,
+            2950,
             0,
             0,
             0});
@@ -1190,7 +1192,7 @@
             this.numTargetWidth.Size = new System.Drawing.Size(80, 22);
             this.numTargetWidth.TabIndex = 6;
             this.numTargetWidth.Value = new decimal(new int[] {
-            1920,
+            2950,
             0,
             0,
             0});
@@ -1259,6 +1261,7 @@
             // 
             // numMaxFileSize
             // 
+            this.numMaxFileSize.DecimalPlaces = 1;
             this.numMaxFileSize.Location = new System.Drawing.Point(150, 28);
             this.numMaxFileSize.Maximum = new decimal(new int[] {
             1000,
@@ -1274,10 +1277,10 @@
             this.numMaxFileSize.Size = new System.Drawing.Size(100, 22);
             this.numMaxFileSize.TabIndex = 1;
             this.numMaxFileSize.Value = new decimal(new int[] {
-            5,
+            99,
             0,
             0,
-            0});
+            65536});
             // 
             // lblMaxFileSize
             // 
