@@ -181,6 +181,8 @@
     <Compile Include="VideoSizeFinder\Dtos\AzureKeysModel.cs" />
     <Compile Include="VideoSizeFinder\Dtos\CloudMediaItemDto.cs" />
     <Compile Include="VideoSizeFinder\Dtos\CloudMediaSearchDto.cs" />
+    <Compile Include="VideoSizeFinder\Dtos\MediaResizeCriteriaDto.cs" />
+    <Compile Include="VideoSizeFinder\Dtos\MediaResizerDto.cs" />
     <Compile Include="VideoSizeFinder\Dtos\VideoInfoDto.cs" />
     <Compile Include="VideoSizeFinder\Entities\AwsS3Config.cs" />
     <Compile Include="VideoSizeFinder\Entities\AzureBlobConfig.cs" />
@@ -196,7 +198,9 @@
     <Compile Include="VideoSizeFinder\Services\AzureMediaService.cs" />
     <Compile Include="VideoSizeFinder\Services\ExcelExportService.cs" />
     <Compile Include="VideoSizeFinder\Services\FFmpegAnalyzerService.cs" />
+    <Compile Include="VideoSizeFinder\Services\ImageResizeService.cs" />
     <Compile Include="VideoSizeFinder\Services\KeysLoaderService.cs" />
+    <Compile Include="VideoSizeFinder\Services\MediaResizerService.cs" />
     <Compile Include="VideoSizeFinder\Services\ResourcesManager.cs" />
     <EmbeddedResource Include="CloudMediaValidator\Components\CloudMediaValidatorForm.resx">
       <DependentUpon>CloudMediaValidatorForm.cs</DependentUpon>

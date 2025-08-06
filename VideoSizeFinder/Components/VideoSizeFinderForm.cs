@@ -22,6 +22,10 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         private ICloudMediaService _cloudMediaService;
         private IFFmpegAnalyzerService _ffmpegAnalyzer;
         private IExcelExportService _excelExportService;
+        private MediaResizerService _mediaResizerService;
+
+        private List<MediaResizerDto> _mediaResizerList = new List<MediaResizerDto>();
+        private List<MediaResizerDto> _resizerResults = new List<MediaResizerDto>();
         private CancellationTokenSource _cancellationTokenSource;
 
         private List<CloudMediaItemDto> _searchResults = new List<CloudMediaItemDto>();
@@ -47,6 +51,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         {
             _ffmpegAnalyzer = new FFmpegAnalyzerService();
             _excelExportService = new ExcelExportService();
+            _mediaResizerService = new MediaResizerService();
         }
 
         private void InitializeUI()
@@ -67,6 +72,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
 
             // DataGridView ayarları
             ConfigureDataGridView();
+            ConfigureResizerDataGridView();
 
             // İlk durumda kontrolleri deaktif et
             EnableSearchControls(false);
@@ -84,6 +90,8 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 lblFFmpegStatus.Text = "✅ FFmpeg is available";
                 lblFFmpegStatus.ForeColor = Color.Green;
             }
+
+            cmbResizeMode.SelectedIndex = 0;
         }
         private void ConfigureDataGridView()
         {
@@ -194,6 +202,109 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 EnableSearchControls(false);
                 _cloudMediaService = null;
             }
+        }
+
+        private void ConfigureResizerDataGridView()
+        {
+            dgvResizerResults.AutoGenerateColumns = false;
+            dgvResizerResults.AllowUserToAddRows = false;
+            dgvResizerResults.AllowUserToDeleteRows = false;
+            dgvResizerResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvResizerResults.MultiSelect = true;
+            dgvResizerResults.ReadOnly = true;
+
+            // Media name column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "MediaName",
+                HeaderText = "Media Name",
+                DataPropertyName = "MediaName",
+                Width = 200,
+                ReadOnly = true
+            });
+
+            // Media URL column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "MediaUrl",
+                HeaderText = "Media URL",
+                DataPropertyName = "MediaUrl",
+                Width = 300,
+                ReadOnly = true
+            });
+
+            // Original file size column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "OriginalSize",
+                HeaderText = "Original Size",
+                DataPropertyName = "MediaFileSizeFormatted",
+                Width = 100,
+                ReadOnly = true
+            });
+
+            // Original resolution column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "OriginalResolution",
+                HeaderText = "Original Resolution",
+                DataPropertyName = "Resolution",
+                Width = 120,
+                ReadOnly = true
+            });
+
+            // Needs resize column
+            dgvResizerResults.Columns.Add(new DataGridViewCheckBoxColumn
+            {
+                Name = "NeedsResize",
+                HeaderText = "Needs Resize",
+                DataPropertyName = "NeedsResize",
+                Width = 80,
+                ReadOnly = true
+            });
+
+            // Processing status column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "ProcessingStatus",
+                HeaderText = "Status",
+                DataPropertyName = "ProcessingStatus",
+                Width = 120,
+                ReadOnly = true
+            });
+
+            // Resized resolution column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "ResizedResolution",
+                HeaderText = "Resized Resolution",
+                DataPropertyName = "ResizedResolution",
+                Width = 120,
+                ReadOnly = true
+            });
+
+            // Resized file size column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "ResizedSize",
+                HeaderText = "Resized Size",
+                DataPropertyName = "ResizedFileSizeFormatted",
+                Width = 100,
+                ReadOnly = true
+            });
+
+            // Error message column
+            dgvResizerResults.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "ErrorMessage",
+                HeaderText = "Error Message",
+                DataPropertyName = "ErrorMessage",
+                Width = 200,
+                ReadOnly = true
+            });
+
+            // DataBindingComplete event handler for row coloring
+            dgvResizerResults.DataBindingComplete += DgvResizerResults_DataBindingComplete;
         }
 
         private void OnSearchTypeChanged(object sender, EventArgs e)
@@ -883,7 +994,344 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             _cancellationTokenSource?.Cancel();
+            _mediaResizerService?.Dispose(); // Bu satırı ekle
             base.OnFormClosing(e);
+        }
+
+        private void DgvResizerResults_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            foreach (DataGridViewRow row in dgvResizerResults.Rows)
+            {
+                if (row.DataBoundItem is MediaResizerDto result)
+                {
+                    Color rowColor = Color.White;
+
+                    if (!string.IsNullOrEmpty(result.ErrorMessage))
+                    {
+                        rowColor = Color.FromArgb(255, 220, 220); // Açık kırmızı - hata
+                    }
+                    else if (result.ProcessingStatus == "Completed - Resized")
+                    {
+                        rowColor = Color.FromArgb(220, 255, 220); // Açık yeşil - resize edildi
+                    }
+                    else if (result.ProcessingStatus == "Completed - No Resize Needed")
+                    {
+                        rowColor = Color.FromArgb(255, 255, 220); // Açık sarı - resize gerekmedi
+                    }
+                    else if (result.ProcessingStatus.Contains("..."))
+                    {
+                        rowColor = Color.FromArgb(220, 220, 255); // Açık mavi - işleniyor
+                    }
+
+                    row.DefaultCellStyle.BackColor = rowColor;
+                }
+            }
+        }
+
+        private void EnableResizerControls(bool enabled)
+        {
+            grpResizerSettings.Enabled = enabled;
+            btnStartResize.Enabled = enabled && _mediaResizerList.Count > 0;
+            btnExportResizerResults.Enabled = enabled && _resizerResults.Count > 0;
+        }
+
+        // 5. Event Handler metodları
+        private void btnUploadMediaList_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
+                {
+                    openFileDialog.Filter = "CSV files (*.csv)|*.csv|Excel files (*.xlsx)|*.xlsx";
+                    openFileDialog.Title = "Choose Media List File";
+
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        string filePath = openFileDialog.FileName;
+                        string extension = Path.GetExtension(filePath).ToLower();
+
+                        lblResizerStatus.Text = "Loading file...";
+                        lblResizerStatus.ForeColor = Color.Orange;
+
+                        if (extension == ".csv")
+                        {
+                            _mediaResizerList = _mediaResizerService.LoadMediaListFromCsv(filePath);
+                        }
+                        else if (extension == ".xlsx")
+                        {
+                            _mediaResizerList = _mediaResizerService.LoadMediaListFromExcel(filePath);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Only CSV and Excel files are supported!", "Invalid File Format",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        if (_mediaResizerList.Count > 0)
+                        {
+                            lblResizerStatus.Text = $"✅ {_mediaResizerList.Count} media items loaded";
+                            lblResizerStatus.ForeColor = Color.Green;
+                            EnableResizerControls(true);
+                        }
+                        else
+                        {
+                            lblResizerStatus.Text = "❌ No valid media items found in file";
+                            lblResizerStatus.ForeColor = Color.Red;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                lblResizerStatus.Text = $"❌ Error loading file: {ex.Message}";
+                lblResizerStatus.ForeColor = Color.Red;
+                MessageBox.Show($"Error loading file: {ex.Message}", "Load Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnDownloadResizerTemplate_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+                {
+                    saveFileDialog.Filter = "CSV files (*.csv)|*.csv";
+                    saveFileDialog.Title = "Save Media List Template";
+                    saveFileDialog.FileName = "media_list_template.csv";
+
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        MediaResizerService.SaveMediaListTemplate(saveFileDialog.FileName);
+                        MessageBox.Show("Template saved successfully!", "Success",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving template: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void btnStartResize_Click(object sender, EventArgs e)
+        {
+            if (_mediaResizerList.Count == 0)
+            {
+                MessageBox.Show("Please upload a media list first!", "No Media List",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // Resize kriterlerini oluştur
+                var criteria = new MediaResizeCriteriaDto
+                {
+                    MaxFileSizeMB = (long)numMaxFileSize.Value,
+                    MaxWidth = (int)numMaxWidth.Value,
+                    MaxHeight = (int)numMaxHeight.Value,
+                    TargetWidth = (int)numTargetWidth.Value,
+                    TargetHeight = (int)numTargetHeight.Value,
+                    Quality = (int)numQuality.Value,
+                    MaintainAspectRatio = chkMaintainAspectRatio.Checked,
+                    ResizeMode = cmbResizeMode.SelectedItem?.ToString() ?? "Fit"
+                };
+
+                btnStartResize.Enabled = false;
+                btnCancelResize.Enabled = true;
+                progressBarResize.Visible = true;
+                progressBarResize.Style = ProgressBarStyle.Blocks;
+                progressBarResize.Maximum = _mediaResizerList.Count;
+                progressBarResize.Value = 0;
+
+                _cancellationTokenSource = new CancellationTokenSource();
+                _resizerResults.Clear();
+
+                // BindingList oluştur ve DataGridView'e bağla
+                var bindingList = new BindingList<MediaResizerDto>();
+                dgvResizerResults.DataSource = bindingList;
+
+                lblResizeStatus.Text = "Starting resize process...";
+                lblResizeStatus.ForeColor = Color.Orange;
+
+                // Resize işlemini başlat
+                await _mediaResizerService.ProcessMediaListAsync(
+                    _mediaResizerList,
+                    criteria,
+                    bindingList,
+                    (processed, total, currentMedia) =>
+                    {
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() => UpdateResizeProgress(processed, total, currentMedia)));
+                        }
+                        else
+                        {
+                            UpdateResizeProgress(processed, total, currentMedia);
+                        }
+                    },
+                    _cancellationTokenSource.Token);
+
+                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    // Results'ı binding list'den güncelle
+                    _resizerResults.Clear();
+                    foreach (var item in bindingList)
+                    {
+                        _resizerResults.Add(item);
+                    }
+
+                    int resizedCount = _resizerResults.Count(r => r.NeedsResize && r.IsProcessed);
+                    int totalCount = _resizerResults.Count;
+
+                    lblResizeStatus.Text = $"✅ Resize completed: {resizedCount}/{totalCount} media resized";
+                    lblResizeStatus.ForeColor = Color.Green;
+
+                    EnableResizerControls(true);
+
+                    MessageBox.Show($"Resize process completed!\n\nTotal: {totalCount}\nResized: {resizedCount}\nNo Resize Needed: {totalCount - resizedCount}",
+                        "Resize Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    await HandleCancelledResize(bindingList?.Count ?? 0);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                await HandleCancelledResize(_resizerResults.Count);
+            }
+            catch (Exception ex)
+            {
+                lblResizeStatus.Text = $"❌ Resize failed: {ex.Message}";
+                lblResizeStatus.ForeColor = Color.Red;
+                MessageBox.Show($"Resize error: {ex.Message}", "Resize Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnStartResize.Enabled = true;
+                btnCancelResize.Enabled = false;
+                progressBarResize.Visible = false;
+            }
+        }
+        private void UpdateResizeProgress(int processed, int total, string currentMedia)
+        {
+            progressBarResize.Value = processed;
+            lblResizeStatus.Text = $"Processing {processed}/{total}: {currentMedia}";
+
+            // Son işlenen kayıtları görünür yap
+            if (dgvResizerResults.Rows.Count > 0)
+            {
+                try
+                {
+                    int lastRowIndex = dgvResizerResults.Rows.Count - 1;
+                    dgvResizerResults.FirstDisplayedScrollingRowIndex = Math.Max(0, lastRowIndex - 5);
+                    dgvResizerResults.ClearSelection();
+                    dgvResizerResults.Rows[lastRowIndex].Selected = true;
+                }
+                catch
+                {
+                    // Scroll hatası varsa sessizce devam et
+                }
+            }
+
+            dgvResizerResults.Refresh();
+            Application.DoEvents();
+        }
+
+        private async Task HandleCancelledResize(int completedCount)
+        {
+            lblResizeStatus.Text = $"⚠️ Resize cancelled - {completedCount} files processed";
+            lblResizeStatus.ForeColor = Color.Orange;
+
+            if (_resizerResults.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"Resize was cancelled, but {_resizerResults.Count} files were successfully processed.\n\nWould you like to save the partial results to Excel?",
+                    "Save Partial Results?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    await ExportResizerResultsToExcelAsync();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Resize was cancelled and no files were processed.",
+                    "Resize Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnCancelResize_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to cancel the resize process?\n\nYou can save partial results if any files have been processed.",
+                "Cancel Resize",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                _cancellationTokenSource?.Cancel();
+                lblResizeStatus.Text = "Resize cancellation requested...";
+                lblResizeStatus.ForeColor = Color.Yellow;
+            }
+        }
+
+        private async void btnExportResizerResults_Click(object sender, EventArgs e)
+        {
+            if (_resizerResults.Count == 0)
+            {
+                MessageBox.Show("No resize results to export!", "No Results",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            await ExportResizerResultsToExcelAsync();
+        }
+
+        private async Task ExportResizerResultsToExcelAsync()
+        {
+            try
+            {
+                using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+                {
+                    saveFileDialog.Filter = "Excel files (*.xlsx)|*.xlsx";
+                    saveFileDialog.Title = "Save Resize Results";
+                    saveFileDialog.FileName = $"MediaResizeResults_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        lblResizeStatus.Text = "Exporting to Excel...";
+                        lblResizeStatus.ForeColor = Color.Orange;
+
+                        await _mediaResizerService.ExportResultsToExcelAsync(_resizerResults, saveFileDialog.FileName);
+
+                        lblResizeStatus.Text = "✅ Excel export completed";
+                        lblResizeStatus.ForeColor = Color.Green;
+
+                        var result = MessageBox.Show(
+                            $"Resize results exported successfully to:\n{saveFileDialog.FileName}\n\nWould you like to open the file?",
+                            "Export Complete", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            System.Diagnostics.Process.Start(saveFileDialog.FileName);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                lblResizeStatus.Text = $"❌ Export failed: {ex.Message}";
+                lblResizeStatus.ForeColor = Color.Red;
+                MessageBox.Show($"Failed to export results: {ex.Message}", "Export Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

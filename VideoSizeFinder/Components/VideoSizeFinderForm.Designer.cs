@@ -85,6 +85,42 @@
             this.btnDownloadSelected = new System.Windows.Forms.Button();
             this.btnTestConnection = new System.Windows.Forms.Button();
             this.lblConnectionStatus = new System.Windows.Forms.Label();
+            this.tabPageMediaResizer = new System.Windows.Forms.TabPage();
+            this.grpResizerUpload = new System.Windows.Forms.GroupBox();
+            this.grpResizerSettings = new System.Windows.Forms.GroupBox();
+            this.grpResizerControl = new System.Windows.Forms.GroupBox();
+            this.grpResizerResults = new System.Windows.Forms.GroupBox();
+
+            // Upload controls
+            this.lblResizerInstructions = new System.Windows.Forms.Label();
+            this.btnUploadMediaList = new System.Windows.Forms.Button();
+            this.btnDownloadResizerTemplate = new System.Windows.Forms.Button();
+            this.lblResizerStatus = new System.Windows.Forms.Label();
+
+            // Settings controls
+            this.lblMaxFileSize = new System.Windows.Forms.Label();
+            this.numMaxFileSize = new System.Windows.Forms.NumericUpDown();
+            this.lblMaxDimensions = new System.Windows.Forms.Label();
+            this.numMaxWidth = new System.Windows.Forms.NumericUpDown();
+            this.numMaxHeight = new System.Windows.Forms.NumericUpDown();
+            this.lblTargetDimensions = new System.Windows.Forms.Label();
+            this.numTargetWidth = new System.Windows.Forms.NumericUpDown();
+            this.numTargetHeight = new System.Windows.Forms.NumericUpDown();
+            this.lblQuality = new System.Windows.Forms.Label();
+            this.numQuality = new System.Windows.Forms.NumericUpDown();
+            this.chkMaintainAspectRatio = new System.Windows.Forms.CheckBox();
+            this.cmbResizeMode = new System.Windows.Forms.ComboBox();
+            this.lblResizeMode = new System.Windows.Forms.Label();
+
+            // Control buttons
+            this.btnStartResize = new System.Windows.Forms.Button();
+            this.btnCancelResize = new System.Windows.Forms.Button();
+            this.btnExportResizerResults = new System.Windows.Forms.Button();
+            this.progressBarResize = new System.Windows.Forms.ProgressBar();
+            this.lblResizeStatus = new System.Windows.Forms.Label();
+
+            // Results
+            this.dgvResizerResults = new System.Windows.Forms.DataGridView();
             this.tabControl.SuspendLayout();
             this.tabPageConnection.SuspendLayout();
             this.pnlAzureConfig.SuspendLayout();
@@ -92,11 +128,23 @@
             this.grpCloudProvider.SuspendLayout();
             this.tabPageSearch.SuspendLayout();
             this.grpSearchResults.SuspendLayout();
+            this.tabPageMediaResizer.SuspendLayout();
+            this.grpResizerUpload.SuspendLayout();
+            this.grpResizerSettings.SuspendLayout();
+            this.grpResizerControl.SuspendLayout();
+            this.grpResizerResults.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvSearchResults)).BeginInit();
             this.grpSearchOptions.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numMaxResults)).BeginInit();
             this.tabPageAnalysis.SuspendLayout();
             this.grpAnalysisOptions.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvResizerResults)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxFileSize)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxWidth)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxHeight)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numTargetWidth)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numTargetHeight)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numQuality)).BeginInit();
             this.SuspendLayout();
             // 
             // tabControl
@@ -104,6 +152,7 @@
             this.tabControl.Controls.Add(this.tabPageConnection);
             this.tabControl.Controls.Add(this.tabPageSearch);
             this.tabControl.Controls.Add(this.tabPageAnalysis);
+            this.tabControl.Controls.Add(this.tabPageMediaResizer);
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
@@ -758,6 +807,301 @@
             this.lblConnectionStatus.Size = new System.Drawing.Size(186, 18);
             this.lblConnectionStatus.TabIndex = 4;
             this.lblConnectionStatus.Text = "Please test connection first";
+
+            // tabPageMediaResizer
+            this.tabPageMediaResizer.Controls.Add(this.grpResizerResults);
+            this.tabPageMediaResizer.Controls.Add(this.grpResizerControl);
+            this.tabPageMediaResizer.Controls.Add(this.grpResizerUpload);
+            this.tabPageMediaResizer.Controls.Add(this.grpResizerSettings);
+            this.tabPageMediaResizer.Location = new System.Drawing.Point(4, 25);
+            this.tabPageMediaResizer.Name = "tabPageMediaResizer";
+            this.tabPageMediaResizer.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageMediaResizer.Size = new System.Drawing.Size(1385, 878);
+            this.tabPageMediaResizer.TabIndex = 3;
+            this.tabPageMediaResizer.Text = "Media Resizer";
+            this.tabPageMediaResizer.UseVisualStyleBackColor = true;
+
+            // grpResizerUpload
+            this.grpResizerUpload.Controls.Add(this.lblResizerStatus);
+            this.grpResizerUpload.Controls.Add(this.btnDownloadResizerTemplate);
+            this.grpResizerUpload.Controls.Add(this.btnUploadMediaList);
+            this.grpResizerUpload.Controls.Add(this.lblResizerInstructions);
+            this.grpResizerUpload.Location = new System.Drawing.Point(20, 20);
+            this.grpResizerUpload.Name = "grpResizerUpload";
+            this.grpResizerUpload.Size = new System.Drawing.Size(600, 150);
+            this.grpResizerUpload.TabIndex = 0;
+            this.grpResizerUpload.TabStop = false;
+            this.grpResizerUpload.Text = "Media List Upload";
+
+            // lblResizerInstructions
+            this.lblResizerInstructions.AutoSize = true;
+            this.lblResizerInstructions.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.lblResizerInstructions.Location = new System.Drawing.Point(20, 25);
+            this.lblResizerInstructions.Name = "lblResizerInstructions";
+            this.lblResizerInstructions.Size = new System.Drawing.Size(450, 18);
+            this.lblResizerInstructions.TabIndex = 0;
+            this.lblResizerInstructions.Text = "Upload CSV or Excel file with MediaName, MediaUrl, MediaFileSize columns.";
+
+            // btnUploadMediaList
+            this.btnUploadMediaList.BackColor = System.Drawing.Color.LightBlue;
+            this.btnUploadMediaList.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnUploadMediaList.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnUploadMediaList.Location = new System.Drawing.Point(20, 60);
+            this.btnUploadMediaList.Name = "btnUploadMediaList";
+            this.btnUploadMediaList.Size = new System.Drawing.Size(160, 40);
+            this.btnUploadMediaList.TabIndex = 1;
+            this.btnUploadMediaList.Text = "Upload File";
+            this.btnUploadMediaList.UseVisualStyleBackColor = false;
+            this.btnUploadMediaList.Click += new System.EventHandler(this.btnUploadMediaList_Click);
+
+            // btnDownloadResizerTemplate
+            this.btnDownloadResizerTemplate.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+            this.btnDownloadResizerTemplate.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDownloadResizerTemplate.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnDownloadResizerTemplate.Location = new System.Drawing.Point(200, 60);
+            this.btnDownloadResizerTemplate.Name = "btnDownloadResizerTemplate";
+            this.btnDownloadResizerTemplate.Size = new System.Drawing.Size(180, 40);
+            this.btnDownloadResizerTemplate.TabIndex = 2;
+            this.btnDownloadResizerTemplate.Text = "Download Template";
+            this.btnDownloadResizerTemplate.UseVisualStyleBackColor = false;
+            this.btnDownloadResizerTemplate.Click += new System.EventHandler(this.btnDownloadResizerTemplate_Click);
+
+            // lblResizerStatus
+            this.lblResizerStatus.AutoSize = true;
+            this.lblResizerStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.lblResizerStatus.Location = new System.Drawing.Point(20, 115);
+            this.lblResizerStatus.Name = "lblResizerStatus";
+            this.lblResizerStatus.Size = new System.Drawing.Size(120, 18);
+            this.lblResizerStatus.TabIndex = 3;
+            this.lblResizerStatus.Text = "No file uploaded";
+
+            // grpResizerSettings
+            this.grpResizerSettings.Controls.Add(this.cmbResizeMode);
+            this.grpResizerSettings.Controls.Add(this.lblResizeMode);
+            this.grpResizerSettings.Controls.Add(this.chkMaintainAspectRatio);
+            this.grpResizerSettings.Controls.Add(this.numQuality);
+            this.grpResizerSettings.Controls.Add(this.lblQuality);
+            this.grpResizerSettings.Controls.Add(this.numTargetHeight);
+            this.grpResizerSettings.Controls.Add(this.numTargetWidth);
+            this.grpResizerSettings.Controls.Add(this.lblTargetDimensions);
+            this.grpResizerSettings.Controls.Add(this.numMaxHeight);
+            this.grpResizerSettings.Controls.Add(this.numMaxWidth);
+            this.grpResizerSettings.Controls.Add(this.lblMaxDimensions);
+            this.grpResizerSettings.Controls.Add(this.numMaxFileSize);
+            this.grpResizerSettings.Controls.Add(this.lblMaxFileSize);
+            this.grpResizerSettings.Enabled = false;
+            this.grpResizerSettings.Location = new System.Drawing.Point(640, 20);
+            this.grpResizerSettings.Name = "grpResizerSettings";
+            this.grpResizerSettings.Size = new System.Drawing.Size(720, 150);
+            this.grpResizerSettings.TabIndex = 1;
+            this.grpResizerSettings.TabStop = false;
+            this.grpResizerSettings.Text = "Resize Settings";
+
+            // lblMaxFileSize
+            this.lblMaxFileSize.AutoSize = true;
+            this.lblMaxFileSize.Location = new System.Drawing.Point(20, 30);
+            this.lblMaxFileSize.Name = "lblMaxFileSize";
+            this.lblMaxFileSize.Size = new System.Drawing.Size(115, 16);
+            this.lblMaxFileSize.TabIndex = 0;
+            this.lblMaxFileSize.Text = "Max File Size (MB):";
+
+            // numMaxFileSize
+            this.numMaxFileSize.Location = new System.Drawing.Point(150, 28);
+            this.numMaxFileSize.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.numMaxFileSize.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            this.numMaxFileSize.Name = "numMaxFileSize";
+            this.numMaxFileSize.Size = new System.Drawing.Size(100, 22);
+            this.numMaxFileSize.TabIndex = 1;
+            this.numMaxFileSize.Value = new decimal(new int[] { 5, 0, 0, 0 });
+
+            // lblMaxDimensions
+            this.lblMaxDimensions.AutoSize = true;
+            this.lblMaxDimensions.Location = new System.Drawing.Point(20, 60);
+            this.lblMaxDimensions.Name = "lblMaxDimensions";
+            this.lblMaxDimensions.Size = new System.Drawing.Size(105, 16);
+            this.lblMaxDimensions.TabIndex = 2;
+            this.lblMaxDimensions.Text = "Max Dimensions:";
+
+            // numMaxWidth
+            this.numMaxWidth.Location = new System.Drawing.Point(150, 58);
+            this.numMaxWidth.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numMaxWidth.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numMaxWidth.Name = "numMaxWidth";
+            this.numMaxWidth.Size = new System.Drawing.Size(80, 22);
+            this.numMaxWidth.TabIndex = 3;
+            this.numMaxWidth.Value = new decimal(new int[] { 3000, 0, 0, 0 });
+
+            // numMaxHeight
+            this.numMaxHeight.Location = new System.Drawing.Point(240, 58);
+            this.numMaxHeight.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numMaxHeight.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numMaxHeight.Name = "numMaxHeight";
+            this.numMaxHeight.Size = new System.Drawing.Size(80, 22);
+            this.numMaxHeight.TabIndex = 4;
+            this.numMaxHeight.Value = new decimal(new int[] { 3000, 0, 0, 0 });
+
+            // lblTargetDimensions
+            this.lblTargetDimensions.AutoSize = true;
+            this.lblTargetDimensions.Location = new System.Drawing.Point(20, 90);
+            this.lblTargetDimensions.Name = "lblTargetDimensions";
+            this.lblTargetDimensions.Size = new System.Drawing.Size(118, 16);
+            this.lblTargetDimensions.TabIndex = 5;
+            this.lblTargetDimensions.Text = "Target Dimensions:";
+
+            // numTargetWidth
+            this.numTargetWidth.Location = new System.Drawing.Point(150, 88);
+            this.numTargetWidth.Maximum = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numTargetWidth.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
+            this.numTargetWidth.Name = "numTargetWidth";
+            this.numTargetWidth.Size = new System.Drawing.Size(80, 22);
+            this.numTargetWidth.TabIndex = 6;
+            this.numTargetWidth.Value = new decimal(new int[] { 1920, 0, 0, 0 });
+
+            // numTargetHeight
+            this.numTargetHeight.Location = new System.Drawing.Point(240, 88);
+            this.numTargetHeight.Maximum = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numTargetHeight.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
+            this.numTargetHeight.Name = "numTargetHeight";
+            this.numTargetHeight.Size = new System.Drawing.Size(80, 22);
+            this.numTargetHeight.TabIndex = 7;
+            this.numTargetHeight.Value = new decimal(new int[] { 1080, 0, 0, 0 });
+
+            // lblQuality
+            this.lblQuality.AutoSize = true;
+            this.lblQuality.Location = new System.Drawing.Point(20, 120);
+            this.lblQuality.Name = "lblQuality";
+            this.lblQuality.Size = new System.Drawing.Size(88, 16);
+            this.lblQuality.TabIndex = 8;
+            this.lblQuality.Text = "Quality (1-100):";
+
+            // numQuality
+            this.numQuality.Location = new System.Drawing.Point(150, 118);
+            this.numQuality.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numQuality.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            this.numQuality.Name = "numQuality";
+            this.numQuality.Size = new System.Drawing.Size(80, 22);
+            this.numQuality.TabIndex = 9;
+            this.numQuality.Value = new decimal(new int[] { 85, 0, 0, 0 });
+
+            // chkMaintainAspectRatio
+            this.chkMaintainAspectRatio.AutoSize = true;
+            this.chkMaintainAspectRatio.Checked = true;
+            this.chkMaintainAspectRatio.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkMaintainAspectRatio.Location = new System.Drawing.Point(350, 30);
+            this.chkMaintainAspectRatio.Name = "chkMaintainAspectRatio";
+            this.chkMaintainAspectRatio.Size = new System.Drawing.Size(157, 20);
+            this.chkMaintainAspectRatio.TabIndex = 10;
+            this.chkMaintainAspectRatio.Text = "Maintain Aspect Ratio";
+            this.chkMaintainAspectRatio.UseVisualStyleBackColor = true;
+
+            // lblResizeMode
+            this.lblResizeMode.AutoSize = true;
+            this.lblResizeMode.Location = new System.Drawing.Point(350, 60);
+            this.lblResizeMode.Name = "lblResizeMode";
+            this.lblResizeMode.Size = new System.Drawing.Size(86, 16);
+            this.lblResizeMode.TabIndex = 11;
+            this.lblResizeMode.Text = "Resize Mode:";
+
+            // cmbResizeMode
+            this.cmbResizeMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbResizeMode.FormattingEnabled = true;
+            this.cmbResizeMode.Items.AddRange(new object[] { "Fit", "Stretch", "Crop" });
+            this.cmbResizeMode.Location = new System.Drawing.Point(450, 58);
+            this.cmbResizeMode.Name = "cmbResizeMode";
+            this.cmbResizeMode.Size = new System.Drawing.Size(120, 24);
+            this.cmbResizeMode.TabIndex = 12;
+
+            // grpResizerControl
+            this.grpResizerControl.Controls.Add(this.lblResizeStatus);
+            this.grpResizerControl.Controls.Add(this.progressBarResize);
+            this.grpResizerControl.Controls.Add(this.btnExportResizerResults);
+            this.grpResizerControl.Controls.Add(this.btnCancelResize);
+            this.grpResizerControl.Controls.Add(this.btnStartResize);
+            this.grpResizerControl.Location = new System.Drawing.Point(20, 190);
+            this.grpResizerControl.Name = "grpResizerControl";
+            this.grpResizerControl.Size = new System.Drawing.Size(1340, 100);
+            this.grpResizerControl.TabIndex = 2;
+            this.grpResizerControl.TabStop = false;
+            this.grpResizerControl.Text = "Resize Control";
+
+            // btnStartResize
+            this.btnStartResize.BackColor = System.Drawing.Color.Orange;
+            this.btnStartResize.Enabled = false;
+            this.btnStartResize.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStartResize.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnStartResize.Location = new System.Drawing.Point(20, 30);
+            this.btnStartResize.Name = "btnStartResize";
+            this.btnStartResize.Size = new System.Drawing.Size(150, 45);
+            this.btnStartResize.TabIndex = 0;
+            this.btnStartResize.Text = "Start Resize";
+            this.btnStartResize.UseVisualStyleBackColor = false;
+            this.btnStartResize.Click += new System.EventHandler(this.btnStartResize_Click);
+
+            // btnCancelResize
+            this.btnCancelResize.BackColor = System.Drawing.Color.Red;
+            this.btnCancelResize.Enabled = false;
+            this.btnCancelResize.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCancelResize.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnCancelResize.ForeColor = System.Drawing.Color.White;
+            this.btnCancelResize.Location = new System.Drawing.Point(190, 30);
+            this.btnCancelResize.Name = "btnCancelResize";
+            this.btnCancelResize.Size = new System.Drawing.Size(100, 45);
+            this.btnCancelResize.TabIndex = 1;
+            this.btnCancelResize.Text = "Cancel";
+            this.btnCancelResize.UseVisualStyleBackColor = false;
+            this.btnCancelResize.Click += new System.EventHandler(this.btnCancelResize_Click);
+
+            // btnExportResizerResults
+            this.btnExportResizerResults.BackColor = System.Drawing.Color.LightGreen;
+            this.btnExportResizerResults.Enabled = false;
+            this.btnExportResizerResults.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportResizerResults.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnExportResizerResults.Location = new System.Drawing.Point(310, 30);
+            this.btnExportResizerResults.Name = "btnExportResizerResults";
+            this.btnExportResizerResults.Size = new System.Drawing.Size(180, 45);
+            this.btnExportResizerResults.TabIndex = 2;
+            this.btnExportResizerResults.Text = "Export to Excel";
+            this.btnExportResizerResults.UseVisualStyleBackColor = false;
+            this.btnExportResizerResults.Click += new System.EventHandler(this.btnExportResizerResults_Click);
+
+            // progressBarResize
+            this.progressBarResize.Location = new System.Drawing.Point(520, 30);
+            this.progressBarResize.Name = "progressBarResize";
+            this.progressBarResize.Size = new System.Drawing.Size(400, 25);
+            this.progressBarResize.TabIndex = 3;
+            this.progressBarResize.Visible = false;
+
+            // lblResizeStatus
+            this.lblResizeStatus.AutoSize = true;
+            this.lblResizeStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.lblResizeStatus.Location = new System.Drawing.Point(520, 60);
+            this.lblResizeStatus.Name = "lblResizeStatus";
+            this.lblResizeStatus.Size = new System.Drawing.Size(150, 18);
+            this.lblResizeStatus.TabIndex = 4;
+            this.lblResizeStatus.Text = "Ready for processing";
+
+            // grpResizerResults
+            this.grpResizerResults.Controls.Add(this.dgvResizerResults);
+            this.grpResizerResults.Location = new System.Drawing.Point(20, 310);
+            this.grpResizerResults.Name = "grpResizerResults";
+            this.grpResizerResults.Size = new System.Drawing.Size(1340, 560);
+            this.grpResizerResults.TabIndex = 3;
+            this.grpResizerResults.TabStop = false;
+            this.grpResizerResults.Text = "Resize Results";
+
+            // dgvResizerResults
+            this.dgvResizerResults.AllowUserToAddRows = false;
+            this.dgvResizerResults.AllowUserToDeleteRows = false;
+            this.dgvResizerResults.AllowUserToOrderColumns = true;
+            this.dgvResizerResults.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvResizerResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvResizerResults.Location = new System.Drawing.Point(20, 25);
+            this.dgvResizerResults.Name = "dgvResizerResults";
+            this.dgvResizerResults.ReadOnly = true;
+            this.dgvResizerResults.RowHeadersWidth = 51;
+            this.dgvResizerResults.RowTemplate.Height = 24;
+            this.dgvResizerResults.Size = new System.Drawing.Size(1314, 529);
+            this.dgvResizerResults.TabIndex = 0;
             // 
             // VideoSizeFinderForm
             // 
@@ -790,6 +1134,21 @@
             this.tabPageAnalysis.PerformLayout();
             this.grpAnalysisOptions.ResumeLayout(false);
             this.grpAnalysisOptions.PerformLayout();
+            this.tabPageMediaResizer.ResumeLayout(false);
+            this.grpResizerUpload.ResumeLayout(false);
+            this.grpResizerUpload.PerformLayout();
+            this.grpResizerSettings.ResumeLayout(false);
+            this.grpResizerSettings.PerformLayout();
+            this.grpResizerControl.ResumeLayout(false);
+            this.grpResizerControl.PerformLayout();
+            this.grpResizerResults.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvResizerResults)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxFileSize)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxWidth)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMaxHeight)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numTargetWidth)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numTargetHeight)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numQuality)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -800,6 +1159,7 @@
         private System.Windows.Forms.TabPage tabPageConnection;
         private System.Windows.Forms.TabPage tabPageSearch;
         private System.Windows.Forms.TabPage tabPageAnalysis;
+        private System.Windows.Forms.TabPage tabPageMediaResizer;
 
         // Connection Tab Controls
         private System.Windows.Forms.GroupBox grpCloudProvider;
@@ -863,5 +1223,41 @@
         private System.Windows.Forms.Button btnAzureKeysCsvTemplateDownload;
         private System.Windows.Forms.Label lblConnectionStatus;
         private System.Windows.Forms.Button btnTestConnection;
+
+        private System.Windows.Forms.GroupBox grpResizerUpload;
+        private System.Windows.Forms.GroupBox grpResizerSettings;
+        private System.Windows.Forms.GroupBox grpResizerControl;
+        private System.Windows.Forms.GroupBox grpResizerResults;
+
+        // Upload controls
+        private System.Windows.Forms.Label lblResizerInstructions;
+        private System.Windows.Forms.Button btnUploadMediaList;
+        private System.Windows.Forms.Button btnDownloadResizerTemplate;
+        private System.Windows.Forms.Label lblResizerStatus;
+
+        // Settings controls
+        private System.Windows.Forms.Label lblMaxFileSize;
+        private System.Windows.Forms.NumericUpDown numMaxFileSize;
+        private System.Windows.Forms.Label lblMaxDimensions;
+        private System.Windows.Forms.NumericUpDown numMaxWidth;
+        private System.Windows.Forms.NumericUpDown numMaxHeight;
+        private System.Windows.Forms.Label lblTargetDimensions;
+        private System.Windows.Forms.NumericUpDown numTargetWidth;
+        private System.Windows.Forms.NumericUpDown numTargetHeight;
+        private System.Windows.Forms.Label lblQuality;
+        private System.Windows.Forms.NumericUpDown numQuality;
+        private System.Windows.Forms.CheckBox chkMaintainAspectRatio;
+        private System.Windows.Forms.ComboBox cmbResizeMode;
+        private System.Windows.Forms.Label lblResizeMode;
+
+        // Control buttons
+        private System.Windows.Forms.Button btnStartResize;
+        private System.Windows.Forms.Button btnCancelResize;
+        private System.Windows.Forms.Button btnExportResizerResults;
+        private System.Windows.Forms.ProgressBar progressBarResize;
+        private System.Windows.Forms.Label lblResizeStatus;
+
+        // Results
+        private System.Windows.Forms.DataGridView dgvResizerResults;
     }
 }
