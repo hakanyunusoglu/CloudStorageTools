@@ -1042,7 +1042,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
             {
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
-                    openFileDialog.Filter = "CSV files (*.csv)|*.csv|Excel files (*.xlsx)|*.xlsx";
+                    openFileDialog.Filter = "Excel files (*.xlsx)|*.xlsx|CSV files (*.csv)|*.csv";
                     openFileDialog.Title = "Choose Media List File";
 
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -1341,18 +1341,18 @@ namespace CloudStorageTools.VideoSizeFinder.Components
             {
                 using (SaveFileDialog saveFileDialog = new SaveFileDialog())
                 {
-                    saveFileDialog.Filter = "Excel files (*.xlsx)|*.xlsx";
+                    saveFileDialog.Filter = "CSV files (*.csv)|*.csv";
                     saveFileDialog.Title = "Save Resize Results";
-                    saveFileDialog.FileName = $"MediaResizeResults_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                    saveFileDialog.FileName = $"MediaResizeResults_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
 
                     if (saveFileDialog.ShowDialog() == DialogResult.OK)
                     {
-                        lblResizeStatus.Text = "Exporting to Excel...";
+                        lblResizeStatus.Text = "Exporting to CSV...";
                         lblResizeStatus.ForeColor = Color.Orange;
 
-                        await _mediaResizerService.ExportResultsToExcelAsync(_resizerResults, saveFileDialog.FileName);
+                        await _mediaResizerService.ExportResultsToCsvAsync(_resizerResults, saveFileDialog.FileName);
 
-                        lblResizeStatus.Text = "✅ Excel export completed";
+                        lblResizeStatus.Text = "✅ CSV export completed";
                         lblResizeStatus.ForeColor = Color.Green;
 
                         var result = MessageBox.Show(
