@@ -1,23 +1,33 @@
 ﻿using CloudStorageTools.VideoSizeFinder.Dtos;
-using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Memory;
+using SixLabors.ImageSharp.Processing;
+using Image = SixLabors.ImageSharp.Image;
 
 namespace CloudStorageTools.VideoSizeFinder.Services
 {
-    public class ImageResizeService
+    public class ImageResizeService : IDisposable
     {
         private readonly HttpClient _httpClient;
+        private readonly Configuration _imageSharpConfig;
 
         public ImageResizeService()
         {
             _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromMinutes(5); // 5 dakika timeout
+            _httpClient.Timeout = TimeSpan.FromMinutes(5);
+
+            // ImageSharp konfigürasyonu
+            _imageSharpConfig = Configuration.Default.Clone();
+
+            // Memory allocation limits
+            _imageSharpConfig.MemoryAllocator = MemoryAllocator.Create(new MemoryAllocatorOptions
+            {
+                MaximumPoolSizeMegabytes = 512
+            });
         }
 
         public async Task<byte[]> DownloadImageAsync(string imageUrl)
@@ -38,11 +48,13 @@ namespace CloudStorageTools.VideoSizeFinder.Services
         {
             try
             {
-                using (var stream = new MemoryStream(imageData))
-                using (var image = Image.FromStream(stream))
+                var decoderOptions = new DecoderOptions()
                 {
-                    return (image.Width, image.Height);
-                }
+                    Configuration = _imageSharpConfig
+                };
+
+                using var image = Image.Load(decoderOptions, imageData);
+                return (image.Width, image.Height);
             }
             catch (Exception ex)
             {
@@ -52,98 +64,58 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
         public bool ShouldResize(MediaResizerDto media, MediaResizeCriteriaDto criteria)
         {
-            // Dosya boyutu kontrolü - MB'yi byte'a çevir
-            decimal maxFileSizeBytes = (decimal)(criteria.MaxFileSizeMB * 1024 * 1024);
+            decimal maxFileSizeBytes = criteria.MaxFileSizeMB * 1024 * 1024;
             bool exceedsFileSize = media.MediaFileSize > maxFileSizeBytes;
 
-            // Boyut kontrolü
             bool exceedsDimensions = false;
             if (media.Width.HasValue && media.Height.HasValue)
             {
-                exceedsDimensions = media.Width.Value > criteria.MaxWidth || media.Height.Value > criteria.MaxHeight;
+                exceedsDimensions = media.Width.Value > criteria.MaxWidth ||
+                                   media.Height.Value > criteria.MaxHeight;
             }
 
             return exceedsFileSize || exceedsDimensions;
         }
 
-
         public async Task<byte[]> ResizeImageAsync(byte[] imageData, MediaResizeCriteriaDto criteria)
         {
             try
             {
-                using (var inputStream = new MemoryStream(imageData))
-                using (var originalImage = Image.FromStream(inputStream))
+                var decoderOptions = new DecoderOptions()
                 {
-                    // Yeni boyutları hesapla
-                    var newSize = CalculateNewSize(
-                        originalImage.Width,
-                        originalImage.Height,
-                        criteria.TargetWidth,
-                        criteria.TargetHeight,
-                        criteria.MaintainAspectRatio,
-                        criteria.ResizeMode);
+                    Configuration = _imageSharpConfig
+                };
 
-                    // Eğer orijinal boyutlarla aynıysa, orijinali döndür
-                    if (newSize.width == originalImage.Width && newSize.height == originalImage.Height)
-                    {
-                        return imageData;
-                    }
+                using var image = Image.Load(decoderOptions, imageData);
+                var originalFormat = image.Metadata.DecodedImageFormat;
 
-                    // Yeniden boyutlandır - PixelFormat'ı koruyarak
-                    PixelFormat pixelFormat = originalImage.PixelFormat;
+                var (newWidth, newHeight) = CalculateNewSize(
+                    image.Width,
+                    image.Height,
+                    criteria.TargetWidth,
+                    criteria.TargetHeight,
+                    criteria.MaintainAspectRatio,
+                    criteria.ResizeMode);
 
-                    // Eğer orijinal format uyumlu değilse, 24bppRgb kullan
-                    if (!IsCompatiblePixelFormat(pixelFormat))
-                    {
-                        pixelFormat = PixelFormat.Format24bppRgb;
-                    }
-
-                    using (var resizedImage = new Bitmap(newSize.width, newSize.height, pixelFormat))
-                    {
-                        // DPI'yi orijinalden kopyala
-                        resizedImage.SetResolution(originalImage.HorizontalResolution, originalImage.VerticalResolution);
-
-                        using (var graphics = Graphics.FromImage(resizedImage))
-                        {
-                            // Kalite ayarları - optimize edilmiş
-                            graphics.Clear(Color.Transparent); // Şeffaflığı koru
-                            graphics.CompositingMode = CompositingMode.SourceCopy;
-                            graphics.CompositingQuality = CompositingQuality.HighQuality;
-                            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                            graphics.SmoothingMode = SmoothingMode.HighQuality;
-                            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-                            // Çizim alanını tanımla
-                            var destRect = new Rectangle(0, 0, newSize.width, newSize.height);
-                            var srcRect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
-
-                            // Resmi çiz
-                            graphics.DrawImage(originalImage, destRect, srcRect, GraphicsUnit.Pixel);
-                        }
-
-                        // Formatı belirle - orijinal formatı korumaya çalış
-                        ImageFormat outputFormat = GetOutputFormat(originalImage);
-
-                        using (var outputStream = new MemoryStream())
-                        {
-                            if (outputFormat.Equals(ImageFormat.Jpeg))
-                            {
-                                SaveAsJpeg(resizedImage, outputStream, criteria.Quality);
-                            }
-                            else if (outputFormat.Equals(ImageFormat.Png))
-                            {
-                                SaveAsPng(resizedImage, outputStream);
-                            }
-                            else
-                            {
-                                // Diğer formatlar için varsayılan olarak JPEG kullan
-                                SaveAsJpeg(resizedImage, outputStream, criteria.Quality);
-                            }
-
-                            return outputStream.ToArray();
-                        }
-                    }
+                if (newWidth == image.Width && newHeight == image.Height)
+                {
+                    return await OptimizeImageQualityAsync(image, originalFormat, criteria.Quality);
                 }
+
+                // DÜZELME 1: ResizeOptions için doğru parametreler
+                var resizeOptions = new ResizeOptions
+                {
+                    Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+                    Mode = GetResizeMode(criteria.ResizeMode), // Method adı düzeltildi
+                    Position = AnchorPositionMode.Center,
+                    Sampler = KnownResamplers.Lanczos3,
+                    Compand = true
+                };
+
+                // DÜZELME 2: Task.Run gereksiz, doğrudan mutate edebiliriz
+                image.Mutate(x => x.Resize(resizeOptions));
+
+                return await EncodeImageAsync(image, originalFormat, criteria.Quality);
             }
             catch (Exception ex)
             {
@@ -151,61 +123,15 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             }
         }
 
-        private bool IsCompatiblePixelFormat(PixelFormat pixelFormat)
+        private async Task<byte[]> OptimizeImageQualityAsync(Image image, IImageFormat? originalFormat, int quality)
         {
-            // GDI+ ile uyumlu pixel formatları
-            return pixelFormat == PixelFormat.Format24bppRgb ||
-                   pixelFormat == PixelFormat.Format32bppArgb ||
-                   pixelFormat == PixelFormat.Format32bppRgb ||
-                   pixelFormat == PixelFormat.Format32bppPArgb;
-        }
-
-        private ImageFormat GetOutputFormat(Image originalImage)
-        {
-            // Orijinal formatı koru, desteklenmeyenler için JPEG kullan
-            if (originalImage.RawFormat.Equals(ImageFormat.Png))
-                return ImageFormat.Png;
-            else if (originalImage.RawFormat.Equals(ImageFormat.Gif))
-                return ImageFormat.Png; // GIF şeffaflığını korumak için PNG kullan
-            else
-                return ImageFormat.Jpeg; // Varsayılan JPEG
-        }
-
-        private void SaveAsJpeg(Image image, Stream stream, int quality)
-        {
-            var encoder = GetEncoder(ImageFormat.Jpeg);
-            if (encoder != null)
-            {
-                var qualityEncoder = System.Drawing.Imaging.Encoder.Quality;
-                using (var encoderParams = new EncoderParameters(1))
-                {
-                    encoderParams.Param[0] = new EncoderParameter(qualityEncoder, quality);
-                    image.Save(stream, encoder, encoderParams);
-                }
-            }
-            else
-            {
-                image.Save(stream, ImageFormat.Jpeg);
-            }
-        }
-
-        private void SaveAsPng(Image image, Stream stream)
-        {
-            var encoder = GetEncoder(ImageFormat.Png);
-            if (encoder != null)
-            {
-                image.Save(stream, encoder, null);
-            }
-            else
-            {
-                image.Save(stream, ImageFormat.Png);
-            }
+            return await EncodeImageAsync(image, originalFormat, quality);
         }
 
         private (int width, int height) CalculateNewSize(int originalWidth, int originalHeight,
             int targetWidth, int targetHeight, bool maintainAspectRatio, string resizeMode)
         {
-            if (!maintainAspectRatio || resizeMode == "Stretch")
+            if (!maintainAspectRatio || resizeMode.Equals("Stretch", StringComparison.OrdinalIgnoreCase))
             {
                 return (targetWidth, targetHeight);
             }
@@ -213,51 +139,78 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             double widthRatio = (double)targetWidth / originalWidth;
             double heightRatio = (double)targetHeight / originalHeight;
 
-            if (resizeMode == "Fit")
+            double ratio = resizeMode.ToUpper() switch
             {
-                // En küçük oranı kullan (tüm resim hedef boyutlara sığar)
-                double ratio = Math.Min(widthRatio, heightRatio);
-                int newWidth = (int)Math.Round(originalWidth * ratio);
-                int newHeight = (int)Math.Round(originalHeight * ratio);
+                "FIT" => Math.Min(widthRatio, heightRatio),
+                "CROP" => Math.Max(widthRatio, heightRatio),
+                _ => Math.Min(widthRatio, heightRatio)
+            };
 
-                // Minimum 1 pixel olsun
-                newWidth = Math.Max(1, newWidth);
-                newHeight = Math.Max(1, newHeight);
+            int newWidth = Math.Max(1, (int)Math.Round(originalWidth * ratio));
+            int newHeight = Math.Max(1, (int)Math.Round(originalHeight * ratio));
 
-                return (newWidth, newHeight);
-            }
-            else if (resizeMode == "Crop")
-            {
-                // En büyük oranı kullan (hedef boyutları tamamen doldurur)
-                double ratio = Math.Max(widthRatio, heightRatio);
-                int newWidth = (int)Math.Round(originalWidth * ratio);
-                int newHeight = (int)Math.Round(originalHeight * ratio);
-
-                // Minimum 1 pixel olsun
-                newWidth = Math.Max(1, newWidth);
-                newHeight = Math.Max(1, newHeight);
-
-                return (newWidth, newHeight);
-            }
-
-            // Varsayılan: Fit
-            double defaultRatio = Math.Min(widthRatio, heightRatio);
-            int defaultWidth = (int)Math.Round(originalWidth * defaultRatio);
-            int defaultHeight = (int)Math.Round(originalHeight * defaultRatio);
-
-            // Minimum 1 pixel olsun
-            defaultWidth = Math.Max(1, defaultWidth);
-            defaultHeight = Math.Max(1, defaultHeight);
-
-            return (defaultWidth, defaultHeight);
+            return (newWidth, newHeight);
         }
 
-        private ImageCodecInfo GetEncoder(ImageFormat format)
+        // DÜZELME 3: Method signature düzeltildi ve ResizeOptions için gereksiz struct kaldırıldı
+        private ResizeMode GetResizeMode(string resizeMode)
         {
-            var codecs = ImageCodecInfo.GetImageEncoders();
-            return codecs.FirstOrDefault(codec => codec.FormatID == format.Guid);
+            return resizeMode.ToUpper() switch
+            {
+                "FIT" => ResizeMode.Max,
+                "STRETCH" => ResizeMode.Stretch,
+                "CROP" => ResizeMode.Crop,
+                _ => ResizeMode.Max
+            };
         }
 
+        private async Task<byte[]> EncodeImageAsync(Image image, IImageFormat? originalFormat, int quality)
+        {
+            using var outputStream = new MemoryStream();
+
+            if (originalFormat?.Name.Equals("JPEG", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var encoder = new JpegEncoder
+                {
+                    Quality = quality
+                };
+
+                await image.SaveAsJpegAsync(outputStream, encoder);
+            }
+            else if (originalFormat?.Name.Equals("PNG", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var encoder = new PngEncoder
+                {
+                    CompressionLevel = PngCompressionLevel.BestCompression,
+                    ColorType = PngColorType.RgbWithAlpha,
+                    BitDepth = PngBitDepth.Bit8
+                };
+                await image.SaveAsPngAsync(outputStream, encoder);
+            }
+            else if (originalFormat?.Name.Equals("WEBP", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var encoder = new WebpEncoder
+                {
+                    Quality = quality,
+                    Method = WebpEncodingMethod.BestQuality,
+                    FileFormat = WebpFileFormatType.Lossy
+                };
+                await image.SaveAsWebpAsync(outputStream, encoder);
+            }
+            else
+            {
+                var encoder = new JpegEncoder
+                {
+                    Quality = quality
+                };
+
+                await image.SaveAsJpegAsync(outputStream, encoder);
+            }
+
+            return outputStream.ToArray();
+        }
+
+        // DÜZELME 4: GetImageDimensions'da da _imageSharpConfig kullanılması
         public string FormatFileSize(long bytes)
         {
             if (bytes == 0) return "0 B";
@@ -278,6 +231,132 @@ namespace CloudStorageTools.VideoSizeFinder.Services
         public void Dispose()
         {
             _httpClient?.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        public bool IsValidImage(byte[] imageData)
+        {
+            try
+            {
+                var decoderOptions = new DecoderOptions()
+                {
+                    Configuration = _imageSharpConfig
+                };
+
+                using var image = Image.Load(decoderOptions, imageData);
+                return image.Width > 0 && image.Height > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public string GetImageFormat(byte[] imageData)
+        {
+            try
+            {
+                var decoderOptions = new DecoderOptions()
+                {
+                    Configuration = _imageSharpConfig
+                };
+
+                using var image = Image.Load(decoderOptions, imageData);
+                return image.Metadata.DecodedImageFormat?.Name ?? "Unknown";
+            }
+            catch
+            {
+                return "Unknown";
+            }
+        }
+
+        public async Task<byte[]> StripMetadataAsync(byte[] imageData)
+        {
+            try
+            {
+                var decoderOptions = new DecoderOptions()
+                {
+                    Configuration = _imageSharpConfig
+                };
+
+                using var image = Image.Load(decoderOptions, imageData);
+
+                image.Metadata.ExifProfile = null;
+                image.Metadata.IccProfile = null;
+                image.Metadata.XmpProfile = null;
+
+                using var outputStream = new MemoryStream();
+                var format = image.Metadata.DecodedImageFormat;
+
+                if (format?.Name.Equals("JPEG", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    await image.SaveAsJpegAsync(outputStream);
+                }
+                else if (format?.Name.Equals("PNG", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    await image.SaveAsPngAsync(outputStream);
+                }
+                else
+                {
+                    await image.SaveAsJpegAsync(outputStream);
+                }
+
+                return outputStream.ToArray();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error stripping metadata: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<Dictionary<string, byte[]>> ResizeImageToBatchAsync(
+            byte[] imageData,
+            Dictionary<string, (int width, int height)> targetSizes,
+            int quality = 90)
+        {
+            var results = new Dictionary<string, byte[]>();
+
+            try
+            {
+                var decoderOptions = new DecoderOptions()
+                {
+                    Configuration = _imageSharpConfig
+                };
+
+                using var originalImage = Image.Load(decoderOptions, imageData);
+                var originalFormat = originalImage.Metadata.DecodedImageFormat;
+
+                foreach (var (sizeName, (width, height)) in targetSizes)
+                {
+                    using var resizedImage = originalImage.Clone(x => x.Resize(new ResizeOptions
+                    {
+                        Size = new SixLabors.ImageSharp.Size(width, height),
+                        Mode = ResizeMode.Max,
+                        Position = AnchorPositionMode.Center,
+                        Sampler = KnownResamplers.Lanczos3,
+                        Compand = true
+                    }));
+
+                    // DÜZELME 5: Task.Run gereksiz burada da
+                    resizedImage.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Size = new SixLabors.ImageSharp.Size(width, height),
+                        Mode = ResizeMode.Max,
+                        Position = AnchorPositionMode.Center,
+                        Sampler = KnownResamplers.Lanczos3,
+                        Compand = true
+                    }));
+
+                    var resizedData = await EncodeImageAsync(resizedImage, originalFormat, quality);
+                    results[sizeName] = resizedData;
+                }
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error in batch resize: {ex.Message}", ex);
+            }
         }
     }
 }

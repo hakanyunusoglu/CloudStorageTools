@@ -258,11 +258,11 @@ namespace CloudStorageTools.VideoSizeFinder.Services
         }
 
         public async Task ProcessMediaListAsync(
-            List<MediaResizerDto> mediaList,
-            MediaResizeCriteriaDto criteria,
-            BindingList<MediaResizerDto> bindingList,
-            Action<int, int, string> progressCallback = null,
-            CancellationToken cancellationToken = default)
+     List<MediaResizerDto> mediaList,
+     MediaResizeCriteriaDto criteria,
+     BindingList<MediaResizerDto> bindingList,
+     Action<int, int, string> progressCallback = null,
+     CancellationToken cancellationToken = default)
         {
             int processed = 0;
             int total = mediaList.Count;
@@ -281,12 +281,27 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                     media.ProcessingStatus = "Downloading...";
                     var imageData = await _imageResizeService.DownloadImageAsync(media.MediaUrl);
 
+                    // Görsel geçerliliğini kontrol et
+                    media.ProcessingStatus = "Validating...";
+                    bool isValidImage = _imageResizeService.IsValidImage(imageData); // DEĞIŞTI: async kaldırıldı
+                    if (!isValidImage)
+                    {
+                        throw new Exception("Downloaded file is not a valid image");
+                    }
+
+                    // Format bilgisini al
+                    string imageFormat = _imageResizeService.GetImageFormat(imageData); // DEĞIŞTI: async kaldırıldı
+
                     // Boyutları al
                     media.ProcessingStatus = "Analyzing...";
                     var dimensions = _imageResizeService.GetImageDimensions(imageData);
                     media.Width = dimensions.width;
                     media.Height = dimensions.height;
                     media.Resolution = $"{dimensions.width}x{dimensions.height}";
+
+                    // Gerçek dosya boyutunu güncelle
+                    media.MediaFileSize = imageData.Length;
+                    media.MediaFileSizeFormatted = _imageResizeService.FormatFileSize(imageData.Length);
 
                     // Resize gerekip gerekmediğini kontrol et
                     media.NeedsResize = _imageResizeService.ShouldResize(media, criteria);
@@ -305,17 +320,59 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                         media.ResizedFileSize = resizedData.Length;
                         media.ResizedFileSizeFormatted = _imageResizeService.FormatFileSize(resizedData.Length);
 
+                        // Kalite kontrolü
+                        decimal compressionRatio = (decimal)resizedData.Length / imageData.Length;
+                        string qualityInfo = compressionRatio < 0.5m ? " (High Compression)" :
+                                           compressionRatio < 0.8m ? " (Medium Compression)" : " (Low Compression)";
+
                         // Data URI formatında sakla
                         string fileExtension = GetFileExtensionFromMediaName(media.MediaName);
                         string mimeType = GetMimeTypeFromExtension(fileExtension);
                         string base64String = Convert.ToBase64String(resizedData);
                         media.ResizedMediaData = $"data:{mimeType};base64,{base64String}";
 
-                        media.ProcessingStatus = "Completed - Resized";
+                        media.ProcessingStatus = $"Completed - Resized{qualityInfo}";
+
+                        // Log compression info
+                        var sizeSaved = imageData.Length - resizedData.Length;
+                        var percentSaved = ((decimal)sizeSaved / imageData.Length) * 100;
+                        Console.WriteLine($"[RESIZE] {media.MediaName}: {_imageResizeService.FormatFileSize(imageData.Length)} → " +
+                                        $"{_imageResizeService.FormatFileSize(resizedData.Length)} " +
+                                        $"(Saved: {percentSaved:F1}%)");
                     }
                     else
                     {
-                        media.ProcessingStatus = "Completed - No Resize Needed";
+                        // Resize gerekmiyorsa metadata temizle (opsiyonel)
+                        try
+                        {
+                            media.ProcessingStatus = "Optimizing...";
+                            var optimizedData = await _imageResizeService.StripMetadataAsync(imageData);
+
+                            if (optimizedData.Length < imageData.Length)
+                            {
+                                var sizeSaved = imageData.Length - optimizedData.Length;
+                                var percentSaved = ((decimal)sizeSaved / imageData.Length) * 100;
+
+                                string mimeType = GetMimeTypeFromExtension(GetFileExtensionFromMediaName(media.MediaName));
+                                string base64String = Convert.ToBase64String(optimizedData);
+                                media.ResizedMediaData = $"data:{mimeType};base64,{base64String}";
+
+                                media.ResizedFileSize = optimizedData.Length;
+                                media.ResizedFileSizeFormatted = _imageResizeService.FormatFileSize(optimizedData.Length);
+
+                                media.ProcessingStatus = $"Completed - Optimized (Saved: {percentSaved:F1}%)";
+                            }
+                            else
+                            {
+                                media.ProcessingStatus = "Completed - No Optimization Needed";
+                            }
+                        }
+                        catch (Exception optEx)
+                        {
+                            // Optimization başarısız olursa, sadece log'la ve devam et
+                            Console.WriteLine($"[WARNING] Optimization failed for {media.MediaName}: {optEx.Message}");
+                            media.ProcessingStatus = "Completed - No Resize Needed";
+                        }
                     }
 
                     media.IsProcessed = true;
@@ -326,6 +383,13 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                     media.ProcessingStatus = "Error";
                     media.ErrorMessage = ex.Message;
                     media.IsProcessed = false;
+
+                    // Detaylı hata loglama
+                    Console.WriteLine($"[ERROR] {media.MediaName}: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"[ERROR DETAIL] {ex.InnerException.Message}");
+                    }
                 }
 
                 // BindingList'e ekle (UI otomatik güncellenecek)
@@ -334,11 +398,15 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                 processed++;
                 progressCallback?.Invoke(processed, total, $"İşlenen: {processed}/{total} - {media.MediaName}");
 
-                // Rate limiting
-                await Task.Delay(100, cancellationToken);
+                // Rate limiting - sunucuyu yormamak için
+                await Task.Delay(50, cancellationToken);
             }
 
-            progressCallback?.Invoke(total, total, $"İşleme tamamlandı. {mediaList.Count(m => m.NeedsResize)} medya resize edildi.");
+            var resizedCount = bindingList.Count(m => m.NeedsResize && m.IsProcessed);
+            var optimizedCount = bindingList.Count(m => !m.NeedsResize && m.IsProcessed && !string.IsNullOrEmpty(m.ResizedMediaData));
+
+            progressCallback?.Invoke(total, total,
+                $"İşleme tamamlandı. {resizedCount} medya resize edildi, {optimizedCount} medya optimize edildi.");
         }
 
         private string ProcessMediaUrl(string mediaUrl, bool createUrlMode, string baseUrl, string token)
@@ -493,46 +561,21 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
         private string GetFileExtensionFromMediaName(string mediaName)
         {
-            if (string.IsNullOrEmpty(mediaName))
-                return ".jpg"; // Default extension
-
-            string extension = Path.GetExtension(mediaName).ToLower();
-
-            // Eğer uzantı yoksa, varsayılan olarak .jpg kullan (resized images için)
-            if (string.IsNullOrEmpty(extension))
-                return ".jpg";
-
-            return extension;
+            return Path.GetExtension(mediaName)?.ToLowerInvariant() ?? ".jpg";
         }
 
         private string GetMimeTypeFromExtension(string extension)
         {
-            if (string.IsNullOrEmpty(extension))
-                return "image/jpeg"; // Default MIME type
-
-            extension = extension.ToLower().TrimStart('.');
-
-            var mimeTypes = new Dictionary<string, string>
-    {
-        { "jpg", "image/jpeg" },
-        { "jpeg", "image/jpeg" },
-        { "png", "image/png" },
-        { "gif", "image/gif" },
-        { "bmp", "image/bmp" },
-        { "webp", "image/webp" },
-        { "tiff", "image/tiff" },
-        { "tif", "image/tiff" },
-        { "svg", "image/svg+xml" },
-        { "ico", "image/x-icon" }
-    };
-
-            if (mimeTypes.TryGetValue(extension, out string mimeType))
+            return extension.ToLowerInvariant() switch
             {
-                return mimeType;
-            }
-
-            // Bilinmeyen uzantı için varsayılan
-            return "image/jpeg";
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".bmp" => "image/bmp",
+                ".tiff" or ".tif" => "image/tiff",
+                _ => "image/jpeg"
+            };
         }
 
         public async Task ProcessMediaDownloadAsync(
