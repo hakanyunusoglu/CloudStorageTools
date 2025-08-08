@@ -52,21 +52,20 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
         public bool ShouldResize(MediaResizerDto media, MediaResizeCriteriaDto criteria)
         {
-            // Dosya boyutu kontrolü
-            long maxFileSizeBytes = criteria.MaxFileSizeMB * 1024 * 1024;
-            if (media.MediaFileSize <= maxFileSizeBytes)
-            {
-                return false;
-            }
+            // Dosya boyutu kontrolü - MB'yi byte'a çevir
+            decimal maxFileSizeBytes = (decimal)(criteria.MaxFileSizeMB * 1024 * 1024);
+            bool exceedsFileSize = media.MediaFileSize > maxFileSizeBytes;
 
             // Boyut kontrolü
-            if (!media.Width.HasValue || !media.Height.HasValue)
+            bool exceedsDimensions = false;
+            if (media.Width.HasValue && media.Height.HasValue)
             {
-                return false;
+                exceedsDimensions = media.Width.Value > criteria.MaxWidth || media.Height.Value > criteria.MaxHeight;
             }
 
-            return media.Width.Value > criteria.MaxWidth || media.Height.Value > criteria.MaxHeight;
+            return exceedsFileSize || exceedsDimensions;
         }
+
 
         public async Task<byte[]> ResizeImageAsync(byte[] imageData, MediaResizeCriteriaDto criteria)
         {
@@ -84,31 +83,63 @@ namespace CloudStorageTools.VideoSizeFinder.Services
                         criteria.MaintainAspectRatio,
                         criteria.ResizeMode);
 
-                    // Yeniden boyutlandır
-                    using (var resizedImage = new Bitmap(newSize.width, newSize.height))
+                    // Eğer orijinal boyutlarla aynıysa, orijinali döndür
+                    if (newSize.width == originalImage.Width && newSize.height == originalImage.Height)
                     {
+                        return imageData;
+                    }
+
+                    // Yeniden boyutlandır - PixelFormat'ı koruyarak
+                    PixelFormat pixelFormat = originalImage.PixelFormat;
+
+                    // Eğer orijinal format uyumlu değilse, 24bppRgb kullan
+                    if (!IsCompatiblePixelFormat(pixelFormat))
+                    {
+                        pixelFormat = PixelFormat.Format24bppRgb;
+                    }
+
+                    using (var resizedImage = new Bitmap(newSize.width, newSize.height, pixelFormat))
+                    {
+                        // DPI'yi orijinalden kopyala
+                        resizedImage.SetResolution(originalImage.HorizontalResolution, originalImage.VerticalResolution);
+
                         using (var graphics = Graphics.FromImage(resizedImage))
                         {
-                            // Kalite ayarları
+                            // Kalite ayarları - optimize edilmiş
+                            graphics.Clear(Color.Transparent); // Şeffaflığı koru
                             graphics.CompositingMode = CompositingMode.SourceCopy;
                             graphics.CompositingQuality = CompositingQuality.HighQuality;
                             graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                             graphics.SmoothingMode = SmoothingMode.HighQuality;
                             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-                            // Çiz
-                            graphics.DrawImage(originalImage, 0, 0, newSize.width, newSize.height);
+                            // Çizim alanını tanımla
+                            var destRect = new Rectangle(0, 0, newSize.width, newSize.height);
+                            var srcRect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
+
+                            // Resmi çiz
+                            graphics.DrawImage(originalImage, destRect, srcRect, GraphicsUnit.Pixel);
                         }
 
-                        // JPEG formatında kaydet
+                        // Formatı belirle - orijinal formatı korumaya çalış
+                        ImageFormat outputFormat = GetOutputFormat(originalImage);
+
                         using (var outputStream = new MemoryStream())
                         {
-                            var encoder = GetEncoder(ImageFormat.Jpeg);
-                            var qualityEncoder = System.Drawing.Imaging.Encoder.Quality;
-                            var encoderParams = new EncoderParameters(1);
-                            encoderParams.Param[0] = new EncoderParameter(qualityEncoder, criteria.Quality);
+                            if (outputFormat.Equals(ImageFormat.Jpeg))
+                            {
+                                SaveAsJpeg(resizedImage, outputStream, criteria.Quality);
+                            }
+                            else if (outputFormat.Equals(ImageFormat.Png))
+                            {
+                                SaveAsPng(resizedImage, outputStream);
+                            }
+                            else
+                            {
+                                // Diğer formatlar için varsayılan olarak JPEG kullan
+                                SaveAsJpeg(resizedImage, outputStream, criteria.Quality);
+                            }
 
-                            resizedImage.Save(outputStream, encoder, encoderParams);
                             return outputStream.ToArray();
                         }
                     }
@@ -117,6 +148,57 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             catch (Exception ex)
             {
                 throw new Exception($"Error resizing image: {ex.Message}", ex);
+            }
+        }
+
+        private bool IsCompatiblePixelFormat(PixelFormat pixelFormat)
+        {
+            // GDI+ ile uyumlu pixel formatları
+            return pixelFormat == PixelFormat.Format24bppRgb ||
+                   pixelFormat == PixelFormat.Format32bppArgb ||
+                   pixelFormat == PixelFormat.Format32bppRgb ||
+                   pixelFormat == PixelFormat.Format32bppPArgb;
+        }
+
+        private ImageFormat GetOutputFormat(Image originalImage)
+        {
+            // Orijinal formatı koru, desteklenmeyenler için JPEG kullan
+            if (originalImage.RawFormat.Equals(ImageFormat.Png))
+                return ImageFormat.Png;
+            else if (originalImage.RawFormat.Equals(ImageFormat.Gif))
+                return ImageFormat.Png; // GIF şeffaflığını korumak için PNG kullan
+            else
+                return ImageFormat.Jpeg; // Varsayılan JPEG
+        }
+
+        private void SaveAsJpeg(Image image, Stream stream, int quality)
+        {
+            var encoder = GetEncoder(ImageFormat.Jpeg);
+            if (encoder != null)
+            {
+                var qualityEncoder = System.Drawing.Imaging.Encoder.Quality;
+                using (var encoderParams = new EncoderParameters(1))
+                {
+                    encoderParams.Param[0] = new EncoderParameter(qualityEncoder, quality);
+                    image.Save(stream, encoder, encoderParams);
+                }
+            }
+            else
+            {
+                image.Save(stream, ImageFormat.Jpeg);
+            }
+        }
+
+        private void SaveAsPng(Image image, Stream stream)
+        {
+            var encoder = GetEncoder(ImageFormat.Png);
+            if (encoder != null)
+            {
+                image.Save(stream, encoder, null);
+            }
+            else
+            {
+                image.Save(stream, ImageFormat.Png);
             }
         }
 
@@ -135,28 +217,51 @@ namespace CloudStorageTools.VideoSizeFinder.Services
             {
                 // En küçük oranı kullan (tüm resim hedef boyutlara sığar)
                 double ratio = Math.Min(widthRatio, heightRatio);
-                return ((int)(originalWidth * ratio), (int)(originalHeight * ratio));
+                int newWidth = (int)Math.Round(originalWidth * ratio);
+                int newHeight = (int)Math.Round(originalHeight * ratio);
+
+                // Minimum 1 pixel olsun
+                newWidth = Math.Max(1, newWidth);
+                newHeight = Math.Max(1, newHeight);
+
+                return (newWidth, newHeight);
             }
             else if (resizeMode == "Crop")
             {
                 // En büyük oranı kullan (hedef boyutları tamamen doldurur)
                 double ratio = Math.Max(widthRatio, heightRatio);
-                return ((int)(originalWidth * ratio), (int)(originalHeight * ratio));
+                int newWidth = (int)Math.Round(originalWidth * ratio);
+                int newHeight = (int)Math.Round(originalHeight * ratio);
+
+                // Minimum 1 pixel olsun
+                newWidth = Math.Max(1, newWidth);
+                newHeight = Math.Max(1, newHeight);
+
+                return (newWidth, newHeight);
             }
 
             // Varsayılan: Fit
             double defaultRatio = Math.Min(widthRatio, heightRatio);
-            return ((int)(originalWidth * defaultRatio), (int)(originalHeight * defaultRatio));
+            int defaultWidth = (int)Math.Round(originalWidth * defaultRatio);
+            int defaultHeight = (int)Math.Round(originalHeight * defaultRatio);
+
+            // Minimum 1 pixel olsun
+            defaultWidth = Math.Max(1, defaultWidth);
+            defaultHeight = Math.Max(1, defaultHeight);
+
+            return (defaultWidth, defaultHeight);
         }
 
         private ImageCodecInfo GetEncoder(ImageFormat format)
         {
-            var codecs = ImageCodecInfo.GetImageDecoders();
+            var codecs = ImageCodecInfo.GetImageEncoders();
             return codecs.FirstOrDefault(codec => codec.FormatID == format.Guid);
         }
 
         public string FormatFileSize(long bytes)
         {
+            if (bytes == 0) return "0 B";
+
             string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
             int counter = 0;
             decimal number = bytes;

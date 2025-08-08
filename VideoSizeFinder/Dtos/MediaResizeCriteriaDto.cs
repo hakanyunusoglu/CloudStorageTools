@@ -2,7 +2,7 @@
 {
     public class MediaResizeCriteriaDto
     {
-        public long MaxFileSizeMB { get; set; }
+        public decimal MaxFileSizeMB { get; set; }
         public int MaxWidth { get; set; }
         public int MaxHeight { get; set; }
         public int TargetWidth { get; set; }

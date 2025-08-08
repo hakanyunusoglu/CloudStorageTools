@@ -1032,6 +1032,7 @@ namespace CloudStorageTools.VideoSizeFinder.Components
         {
             grpResizerSettings.Enabled = enabled;
             btnStartResize.Enabled = enabled && _mediaResizerList.Count > 0;
+            btnDownloadMediaFiles.Enabled = enabled && _mediaResizerList.Count > 0;
             btnExportResizerResults.Enabled = enabled && _resizerResults.Count > 0;
         }
 
@@ -1090,7 +1091,11 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                             lblResizerStatus.ForeColor = Color.Green;
                             EnableResizerControls(true);
 
-                            // İlk birkaç URL'yi preview olarak göster (opsiyonel)
+                            // DataGridView'e yükle
+                            var bindingList = new BindingList<MediaResizerDto>(_mediaResizerList);
+                            dgvResizerResults.DataSource = bindingList;
+
+                            // İlk birkaç URL'yi preview olarak göster
                             if (_mediaResizerList.Count > 0)
                             {
                                 string previewUrls = string.Join("\n", _mediaResizerList.Take(3).Select(m => m.MediaUrl));
@@ -1099,20 +1104,12 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                                     previewUrls += $"\n... (+{_mediaResizerList.Count - 3} more)";
                                 }
 
-                                // Preview için bir tooltip veya label kullanılabilir
                                 string previewMessage = createUrlMode
                                     ? $"URLs created using Base URL: {baseUrl}\nSample URLs:\n{previewUrls}"
                                     : $"Using existing URLs from file\nSample URLs:\n{previewUrls}";
 
-                                // Bu bilgiyi kullanıcıya göstermek için opsiyonel bir dialog
-                                if (MessageBox.Show($"Media list loaded successfully!\n\n{previewMessage}\n\nDo you want to continue?",
-                                    "Media List Loaded", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.No)
-                                {
-                                    _mediaResizerList.Clear();
-                                    lblResizerStatus.Text = "Operation cancelled";
-                                    lblResizerStatus.ForeColor = Color.Orange;
-                                    return;
-                                }
+                                MessageBox.Show($"Media list loaded successfully!\n\n{previewMessage}\n\nYou can now:\n• Resize images: Click 'Start Resize'\n• Download files: Click 'Download Media Files'",
+                                    "Media List Loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
                         }
                         else
@@ -1129,6 +1126,169 @@ namespace CloudStorageTools.VideoSizeFinder.Components
                 lblResizerStatus.ForeColor = Color.Red;
                 MessageBox.Show($"Error loading file: {ex.Message}", "Load Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void btnDownloadMediaFiles_Click(object sender, EventArgs e)
+        {
+            if (_mediaResizerList.Count == 0)
+            {
+                MessageBox.Show("Please upload a media list first!", "No Media List",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Klasör seçtir
+            using (var folderDialog = new FolderBrowserDialog())
+            {
+                folderDialog.Description = "Select folder to save downloaded media files";
+                folderDialog.ShowNewFolderButton = true;
+
+                if (folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string downloadPath = folderDialog.SelectedPath;
+
+                    var confirmResult = MessageBox.Show(
+                        $"Ready to download {_mediaResizerList.Count} media files to:\n{downloadPath}\n\nDo you want to continue?",
+                        "Confirm Download", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (confirmResult == DialogResult.Yes)
+                    {
+                        await StartDownloadProcessAsync(downloadPath);
+                    }
+                }
+            }
+        }
+
+        private async Task StartDownloadProcessAsync(string downloadPath)
+        {
+            try
+            {
+                btnStartResize.Enabled = false;
+                btnDownloadMediaFiles.Enabled = false;
+                btnCancelResize.Enabled = true;
+                progressBarResize.Visible = true;
+                progressBarResize.Style = ProgressBarStyle.Blocks;
+                progressBarResize.Maximum = _mediaResizerList.Count;
+                progressBarResize.Value = 0;
+
+                _cancellationTokenSource = new CancellationTokenSource();
+
+                // Yeni binding list oluştur download sonuçları için
+                var downloadResults = new List<MediaResizerDto>();
+                var bindingList = new BindingList<MediaResizerDto>();
+                dgvResizerResults.DataSource = bindingList;
+
+                lblResizeStatus.Text = "Starting download process...";
+                lblResizeStatus.ForeColor = Color.Orange;
+
+                await _mediaResizerService.ProcessMediaDownloadAsync(
+                    _mediaResizerList,
+                    downloadPath,
+                    bindingList,
+                    (processed, total, currentMedia) =>
+                    {
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() => UpdateDownloadProgress(processed, total, currentMedia)));
+                        }
+                        else
+                        {
+                            UpdateDownloadProgress(processed, total, currentMedia);
+                        }
+                    },
+                    _cancellationTokenSource.Token);
+
+                if (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    // Results'ı binding list'den güncelle
+                    _resizerResults.Clear();
+                    foreach (var item in bindingList)
+                    {
+                        _resizerResults.Add(item);
+                    }
+
+                    int successCount = _resizerResults.Count(r => r.ProcessingStatus.Contains("Downloaded"));
+                    int totalCount = _resizerResults.Count;
+
+                    lblResizeStatus.Text = $"✅ Download completed: {successCount}/{totalCount} files downloaded";
+                    lblResizeStatus.ForeColor = Color.Green;
+
+                    btnExportResizerResults.Enabled = true;
+
+                    MessageBox.Show($"Download process completed!\n\nTotal: {totalCount}\nSuccessful: {successCount}\nFailed: {totalCount - successCount}\n\nFiles saved to: {downloadPath}",
+                        "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    await HandleCancelledDownload(bindingList?.Count ?? 0, downloadPath);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                await HandleCancelledDownload(_resizerResults.Count, downloadPath);
+            }
+            catch (Exception ex)
+            {
+                lblResizeStatus.Text = $"❌ Download failed: {ex.Message}";
+                lblResizeStatus.ForeColor = Color.Red;
+                MessageBox.Show($"Download error: {ex.Message}", "Download Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnStartResize.Enabled = true;
+                btnDownloadMediaFiles.Enabled = true;
+                btnCancelResize.Enabled = false;
+                progressBarResize.Visible = false;
+            }
+        }
+
+        private void UpdateDownloadProgress(int processed, int total, string currentMedia)
+        {
+            progressBarResize.Value = processed;
+            lblResizeStatus.Text = $"Downloading {processed}/{total}: {Path.GetFileName(currentMedia)}";
+
+            // Son işlenen kayıtları görünür yap
+            if (dgvResizerResults.Rows.Count > 0)
+            {
+                try
+                {
+                    int lastRowIndex = dgvResizerResults.Rows.Count - 1;
+                    dgvResizerResults.FirstDisplayedScrollingRowIndex = Math.Max(0, lastRowIndex - 5);
+                    dgvResizerResults.ClearSelection();
+                    dgvResizerResults.Rows[lastRowIndex].Selected = true;
+                }
+                catch
+                {
+                    // Scroll hatası varsa sessizce devam et
+                }
+            }
+
+            dgvResizerResults.Refresh();
+            Application.DoEvents();
+        }
+
+        private async Task HandleCancelledDownload(int completedCount, string downloadPath)
+        {
+            lblResizeStatus.Text = $"⚠️ Download cancelled - {completedCount} files processed";
+            lblResizeStatus.ForeColor = Color.Orange;
+
+            if (_resizerResults.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"Download was cancelled, but {_resizerResults.Count} files were successfully processed.\n\nFiles location: {downloadPath}\n\nWould you like to export the results to CSV?",
+                    "Save Partial Results?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    await ExportResizerResultsToExcelAsync();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Download was cancelled and no files were processed.",
+                    "Download Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 

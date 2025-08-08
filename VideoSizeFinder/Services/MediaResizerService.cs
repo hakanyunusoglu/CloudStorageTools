@@ -10,6 +10,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -532,6 +533,160 @@ namespace CloudStorageTools.VideoSizeFinder.Services
 
             // Bilinmeyen uzantı için varsayılan
             return "image/jpeg";
+        }
+
+        public async Task ProcessMediaDownloadAsync(
+            List<MediaResizerDto> mediaList,
+            string downloadPath,
+            BindingList<MediaResizerDto> bindingList,
+            Action<int, int, string> progressCallback = null,
+            CancellationToken cancellationToken = default)
+        {
+            int processed = 0;
+            int total = mediaList.Count;
+
+            progressCallback?.Invoke(processed, total, "Starting download process...");
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.Timeout = TimeSpan.FromMinutes(5); // 5 dakika timeout
+
+                foreach (var media in mediaList)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var downloadResult = new MediaResizerDto
+                    {
+                        MediaName = media.MediaName,
+                        MediaUrl = media.MediaUrl,
+                        MediaFileSize = media.MediaFileSize,
+                        MediaFileSizeFormatted = media.MediaFileSizeFormatted,
+                        ProcessingStatus = "Downloading...",
+                        ProcessedDate = DateTime.Now
+                    };
+
+                    try
+                    {
+                        progressCallback?.Invoke(processed, total, $"Downloading: {media.MediaName}");
+
+                        // Dosyayı indir
+                        var response = await httpClient.GetAsync(media.MediaUrl, cancellationToken);
+                        response.EnsureSuccessStatusCode();
+
+                        var fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                        // Gerçek dosya boyutunu güncelle
+                        downloadResult.MediaFileSize = fileBytes.Length;
+                        downloadResult.MediaFileSizeFormatted = _imageResizeService.FormatFileSize(fileBytes.Length);
+
+                        // Dosya adını temizle (invalid karakterleri kaldır)
+                        string safeFileName = GetSafeFileName(media.MediaName);
+                        string filePath = Path.Combine(downloadPath, safeFileName);
+
+                        // Eğer aynı isimde dosya varsa, numara ekle
+                        filePath = GetUniqueFilePath(filePath);
+
+                        // Dosyayı kaydet
+                        File.WriteAllBytes(filePath, fileBytes);
+
+                        downloadResult.ProcessingStatus = $"Downloaded - {Path.GetFileName(filePath)}";
+                        downloadResult.IsProcessed = true;
+
+                        // İsteğe bağlı: Boyutları al (sadece resimler için)
+                        if (IsImageFile(safeFileName))
+                        {
+                            try
+                            {
+                                var dimensions = _imageResizeService.GetImageDimensions(fileBytes);
+                                downloadResult.Width = dimensions.width;
+                                downloadResult.Height = dimensions.height;
+                                downloadResult.Resolution = $"{dimensions.width}x{dimensions.height}";
+                            }
+                            catch
+                            {
+                                // Boyut alınamazsa devam et
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        downloadResult.ProcessingStatus = "Download Failed";
+                        downloadResult.ErrorMessage = ex.Message;
+                        downloadResult.IsProcessed = false;
+                    }
+
+                    // BindingList'e ekle (UI otomatik güncellenecek)
+                    bindingList.Add(downloadResult);
+
+                    processed++;
+                    progressCallback?.Invoke(processed, total, $"Processed: {processed}/{total} - {media.MediaName}");
+
+                    // Rate limiting - sunucuyu yormamak için
+                    await Task.Delay(200, cancellationToken);
+                }
+            }
+
+            progressCallback?.Invoke(total, total, $"Download completed! {bindingList.Count(r => r.IsProcessed)} files downloaded.");
+        }
+
+        // Yardımcı metodlar
+        private string GetSafeFileName(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return "unnamed_file";
+
+            // Invalid karakterleri temizle
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            string safeName = fileName;
+
+            foreach (char c in invalidChars)
+            {
+                safeName = safeName.Replace(c, '_');
+            }
+
+            // Çok uzun dosya adlarını kısalt
+            if (safeName.Length > 200)
+            {
+                string extension = Path.GetExtension(safeName);
+                string nameWithoutExt = Path.GetFileNameWithoutExtension(safeName);
+                safeName = nameWithoutExt.Substring(0, 200 - extension.Length) + extension;
+            }
+
+            return safeName;
+        }
+
+        private string GetUniqueFilePath(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return filePath;
+
+            string directory = Path.GetDirectoryName(filePath);
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            string extension = Path.GetExtension(filePath);
+
+            int counter = 1;
+            string newFilePath;
+
+            do
+            {
+                string newFileName = $"{fileNameWithoutExt}_{counter}{extension}";
+                newFilePath = Path.Combine(directory, newFileName);
+                counter++;
+            }
+            while (File.Exists(newFilePath));
+
+            return newFilePath;
+        }
+
+        private bool IsImageFile(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return false;
+
+            string extension = Path.GetExtension(fileName).ToLower();
+            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif" };
+
+            return imageExtensions.Contains(extension);
         }
     }
 }

@@ -94,6 +94,7 @@
             this.btnExportResizerResults = new System.Windows.Forms.Button();
             this.btnCancelResize = new System.Windows.Forms.Button();
             this.btnStartResize = new System.Windows.Forms.Button();
+            this.btnDownloadMediaFiles = new System.Windows.Forms.Button();
             this.grpResizerUpload = new System.Windows.Forms.GroupBox();
             this.lblResizerStatus = new System.Windows.Forms.Label();
             this.btnDownloadResizerTemplate = new System.Windows.Forms.Button();
@@ -856,9 +857,10 @@
             this.grpResizerControl.Controls.Add(this.btnExportResizerResults);
             this.grpResizerControl.Controls.Add(this.btnCancelResize);
             this.grpResizerControl.Controls.Add(this.btnStartResize);
-            this.grpResizerControl.Location = new System.Drawing.Point(20, 349);
+            this.grpResizerControl.Controls.Add(this.btnDownloadMediaFiles);
+            this.grpResizerControl.Location = new System.Drawing.Point(20, 347);
             this.grpResizerControl.Name = "grpResizerControl";
-            this.grpResizerControl.Size = new System.Drawing.Size(1340, 100);
+            this.grpResizerControl.Size = new System.Drawing.Size(1340, 102);
             this.grpResizerControl.TabIndex = 2;
             this.grpResizerControl.TabStop = false;
             this.grpResizerControl.Text = "Resize Control";
@@ -867,7 +869,7 @@
             // 
             this.lblResizeStatus.AutoSize = true;
             this.lblResizeStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
-            this.lblResizeStatus.Location = new System.Drawing.Point(520, 60);
+            this.lblResizeStatus.Location = new System.Drawing.Point(739, 75);
             this.lblResizeStatus.Name = "lblResizeStatus";
             this.lblResizeStatus.Size = new System.Drawing.Size(149, 18);
             this.lblResizeStatus.TabIndex = 4;
@@ -875,9 +877,9 @@
             // 
             // progressBarResize
             // 
-            this.progressBarResize.Location = new System.Drawing.Point(520, 30);
+            this.progressBarResize.Location = new System.Drawing.Point(742, 40);
             this.progressBarResize.Name = "progressBarResize";
-            this.progressBarResize.Size = new System.Drawing.Size(400, 25);
+            this.progressBarResize.Size = new System.Drawing.Size(592, 25);
             this.progressBarResize.TabIndex = 3;
             this.progressBarResize.Visible = false;
             // 
@@ -887,7 +889,7 @@
             this.btnExportResizerResults.Enabled = false;
             this.btnExportResizerResults.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportResizerResults.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
-            this.btnExportResizerResults.Location = new System.Drawing.Point(310, 30);
+            this.btnExportResizerResults.Location = new System.Drawing.Point(541, 30);
             this.btnExportResizerResults.Name = "btnExportResizerResults";
             this.btnExportResizerResults.Size = new System.Drawing.Size(180, 45);
             this.btnExportResizerResults.TabIndex = 2;
@@ -902,7 +904,7 @@
             this.btnCancelResize.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCancelResize.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
             this.btnCancelResize.ForeColor = System.Drawing.Color.White;
-            this.btnCancelResize.Location = new System.Drawing.Point(190, 30);
+            this.btnCancelResize.Location = new System.Drawing.Point(425, 30);
             this.btnCancelResize.Name = "btnCancelResize";
             this.btnCancelResize.Size = new System.Drawing.Size(100, 45);
             this.btnCancelResize.TabIndex = 1;
@@ -916,13 +918,27 @@
             this.btnStartResize.Enabled = false;
             this.btnStartResize.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnStartResize.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
-            this.btnStartResize.Location = new System.Drawing.Point(20, 30);
+            this.btnStartResize.Location = new System.Drawing.Point(263, 30);
             this.btnStartResize.Name = "btnStartResize";
-            this.btnStartResize.Size = new System.Drawing.Size(150, 45);
+            this.btnStartResize.Size = new System.Drawing.Size(146, 45);
             this.btnStartResize.TabIndex = 0;
             this.btnStartResize.Text = "Start Resize";
             this.btnStartResize.UseVisualStyleBackColor = false;
             this.btnStartResize.Click += new System.EventHandler(this.btnStartResize_Click);
+            // 
+            // btnDownloadMediaFiles
+            // 
+            this.btnDownloadMediaFiles.BackColor = System.Drawing.Color.LightGreen;
+            this.btnDownloadMediaFiles.Enabled = false;
+            this.btnDownloadMediaFiles.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDownloadMediaFiles.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.btnDownloadMediaFiles.Location = new System.Drawing.Point(20, 30);
+            this.btnDownloadMediaFiles.Name = "btnDownloadMediaFiles";
+            this.btnDownloadMediaFiles.Size = new System.Drawing.Size(228, 45);
+            this.btnDownloadMediaFiles.TabIndex = 5;
+            this.btnDownloadMediaFiles.Text = "Download Media Files";
+            this.btnDownloadMediaFiles.UseVisualStyleBackColor = false;
+            this.btnDownloadMediaFiles.Click += new System.EventHandler(this.btnDownloadMediaFiles_Click);
             // 
             // grpResizerUpload
             // 
@@ -991,7 +1007,6 @@
             this.grpUrlCreation.Controls.Add(this.lblToken);
             this.grpUrlCreation.Controls.Add(this.txtBaseUrl);
             this.grpUrlCreation.Controls.Add(this.lblBaseUrl);
-            this.grpUrlCreation.Enabled = true;
             this.grpUrlCreation.Location = new System.Drawing.Point(20, 210);
             this.grpUrlCreation.Name = "grpUrlCreation";
             this.grpUrlCreation.Size = new System.Drawing.Size(560, 100);
@@ -1053,6 +1068,7 @@
             this.rbCreateUrl.Name = "rbCreateUrl";
             this.rbCreateUrl.Size = new System.Drawing.Size(98, 20);
             this.rbCreateUrl.TabIndex = 1;
+            this.rbCreateUrl.TabStop = true;
             this.rbCreateUrl.Text = "Create URL";
             this.rbCreateUrl.UseVisualStyleBackColor = true;
             this.rbCreateUrl.CheckedChanged += new System.EventHandler(this.rbCreateUrl_CheckedChanged);
@@ -1060,7 +1076,6 @@
             // rbUrlAlreadyExists
             // 
             this.rbUrlAlreadyExists.AutoSize = true;
-            this.rbUrlAlreadyExists.Checked = false;
             this.rbUrlAlreadyExists.Location = new System.Drawing.Point(20, 20);
             this.rbUrlAlreadyExists.Name = "rbUrlAlreadyExists";
             this.rbUrlAlreadyExists.Size = new System.Drawing.Size(143, 20);
@@ -1463,5 +1478,7 @@
         private System.Windows.Forms.TextBox txtBaseUrl;
         private System.Windows.Forms.Label lblToken;
         private System.Windows.Forms.TextBox txtToken;
+
+        private System.Windows.Forms.Button btnDownloadMediaFiles;
     }
 }
